@@ -1,5 +1,4 @@
 import json
-from os import login_tty
 import sys
 from dbcontext import *
 from sqlalchemy import and_
