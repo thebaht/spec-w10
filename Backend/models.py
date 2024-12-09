@@ -14,6 +14,7 @@ class Manufacturer(Base):
     __tablename__ = "manufacturer"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(30))
+
     products: Mapped[List["Product"]] = relationship(
         back_populates="manufacturer", cascade="all, delete-orphan"
     )
@@ -27,7 +28,7 @@ class Product(Base):
     description: Mapped[str] = mapped_column(String(100))
     image: Mapped[str] = mapped_column(String(100))
     ingredients: Mapped[str] = mapped_column(String(100))
-    nutrional_value: Mapped[str] = mapped_column(String(100))
+    nutritional_value: Mapped[str] = mapped_column(String(100))
     stock: Mapped[int] = mapped_column(default=0)
     price: Mapped[float]
 

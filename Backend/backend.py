@@ -63,32 +63,28 @@ filter = {
 """
 
 #! Populate db with db_seed.py here
-# def populateDB():
-#     print("Populating database")
-#     with dbcontext.get_session() as S:  # Start a session with the database
-#         def add_references():
-#             """Adds predefined reference data (genres, manufacturers, characters) to the database."""
-#             refs = [
-#                 *db_seed.create_genre(),
-#                 *db_seed.create_manufacturers(),
-#                 *db_seed.create_characters(),
-#             ]
-#             print(f"    Added {len(refs)} references")
-#             S.add_all(refs)
-#         def add_all_items():
-#             """Adds predefined items (board games, collectible figures, tabletop figures) to the database."""
-#             items = [
-#                 *db_seed.create_boardGames(S),
-#                 *db_seed.create_collectibleFigures(S),
-#                 *db_seed.create_tabletopFigures(S),
-#             ]
-#             print(f"    Added {len(items)} items")
-#             S.add_all(items)
-#         add_references()
-#         add_all_items()
-#         S.commit()  # Commit the changes to the database
+def populateDB():
+    print("Populating database")
+    with dbcontext.get_session() as S:  # Start a session with the database
+        def add_references():
+            """Adds predefined reference data (genres, manufacturers, characters) to the database."""
+            refs = [
+                *db_seed.create_manufacturers(),
+            ]
+            print(f"    Added {len(refs)} references")
+            S.add_all(refs)
+        def add_all_items():
+            """Adds predefined items (board games, collectible figures, tabletop figures) to the database."""
+            items = [
+                *db_seed.create_products(),
+                *db_seed.create_customers(),
+            ]
+            print(f"    Added {len(items)} items")
+            S.add_all(items)
+        add_references()
+        add_all_items()
+        S.commit()  # Commit the changes to the database
 #! ..................................
-
 
 
 def serialize_model(obj: Base):
@@ -203,7 +199,7 @@ def get_items(table_name):
     return jsonify(data), 200  # Return serialized data as a JSON response
 
 
-@app.route('/api/item/<string:table_name>/<int:id>', methods=['GET'])
+@app.route('/api/get/<string:table_name>/<int:id>', methods=['GET'])
 def get_item(table_name, id):
     """
     Retrieves a single item from a specific table by its ID.
@@ -231,33 +227,66 @@ def get_item(table_name, id):
 
 
 
-# @app.route('/api/item', methods=['POST'])
-# def create_item():
-#     """
-#     Creates a new item in the database based on the JSON in the request body.
+@app.route('/api/create', methods=['POST'])
+def create_item():
+    """
+    Creates a new item in the database based on the JSON in the request body.
 
-#     Returns:
-#         Response: JSON response containing the created item.
-#     """
-#     session = dbcontext.get_session() # Start a new database session
-#     try:
-#         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
-#         item = Factory.create_item_from_dict(session, blueprint) # Create a new item using the Factory
-#         session.add(item) # Add the new item to the session
-#         data = serialize_model(item) # Serialize the created item
-#     except Exception as e:
-#         session.rollback() # Roll back changes if an error occurs
-#         return str(e), 400 # Return error message with 400 status code
-#     finally:
-#         _commit(session) # Commit transaction to database
-#         session.close() # Close the session
-#     return jsonify(data), 200 # Return serialized item as a JSON response
-
-
-
+    Returns:
+        Response: JSON response containing the created item.
+    """
+    session = dbcontext.get_session() # Start a new database session
+    try:
+        blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
+        table = models.TABLES_GET(dict.pop("type")).cls
+        item = table(**dict)
+        session.add(item) # Add the new item to the session
+        data = serialize_model(item) # Serialize the created item
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return jsonify(data), 200 # Return serialized item as a JSON response
 
 
-@app.route('/api/item/<string:table_name>/<int:id>', methods=['PUT'])
+@app.route('/api/order', methods=['POST'])
+def order():
+    """
+    Creates a new item in the database based on the JSON in the request body.
+
+    Returns:
+        Response: JSON response containing the created item.
+    """
+    session = dbcontext.get_session() # Start a new database session
+    try:
+        blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
+        order_products = blueprint.pop("order_products")
+
+        order = Order(**blueprint)
+        session.add(order)
+
+        order.order_products = [OrderProduct(order_id=order.id, *order_product) for order_product in order_products]
+
+        for orderproduct in order.order_products:
+            if orderproduct.product.stock >= orderproduct.quantity:
+                orderproduct.product.stock -= orderproduct.quantity
+            else:
+                raise Exception("Not enough products in stock")
+
+        data = serialize_model(order) # Serialize the created item
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return jsonify(data), 200 # Return serialized item as a JSON response
+
+
+
+@app.route('/api/update/<string:table_name>/<int:id>', methods=['PUT'])
 def update_item(table_name, id):
     """
     Updates an existing item in a specific table by its ID.
@@ -288,8 +317,8 @@ def update_item(table_name, id):
 
 
 
-@app.route('/api/item/<string:table_name>/<int:id>', methods=['DELETE'])
-def remove_item(table_name, id):
+@app.route('/api/delete/<string:table_name>/<int:id>', methods=['DELETE'])
+def delete_item(table_name, id):
     """
     Removes an item from the database in a specific table by its ID.
 
@@ -331,5 +360,5 @@ def _commit(session:Session):
 if __name__ == "__main__":
     TESTMODE = "testmode" in sys.argv   # testmode argument in terminal
     print(f"Testmode: {"Enabled" if TESTMODE else "Disabled"}")
-    # populateDB()    # populate db with example data
+    populateDB()    # populate db with example data
     app.run()   # start flask app
