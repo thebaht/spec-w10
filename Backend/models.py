@@ -24,6 +24,8 @@ class Product(Base):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey("manufacturer.id"))
     manufacturer: Mapped["Manufacturer"] = relationship(back_populates="products")
     name: Mapped[str] = mapped_column(String(30))
+    description: Mapped[str] = mapped_column(String(100))
+    image: Mapped[str] = mapped_column(String(100))
     ingredients: Mapped[str] = mapped_column(String(100))
     nutrional_value: Mapped[str] = mapped_column(String(100))
     stock: Mapped[int] = mapped_column(default=0)
