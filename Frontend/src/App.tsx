@@ -1,10 +1,15 @@
-import { createSignal } from 'solid-js'
+import { createSignal, onMount } from 'solid-js'
 import solidLogo from './assets/solid.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
   const [count, setCount] = createSignal(1)
+
+  onMount(async () => {
+    const res = await fetch(`http://127.0.0.1:5000/api/get/product`);
+    setPhotos(await res.json());
+  });
 
   return (
     <>
