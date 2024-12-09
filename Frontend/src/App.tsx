@@ -1,38 +1,63 @@
-import { createSignal, onMount } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from '/vite.svg'
+import { createSignal, createMemo, onMount, For } from 'solid-js'
 import './App.css'
 
+// function ItemTable() {
+
+// }
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  image: string;
+  ingredients: string;
+  nutritional_value: string;
+  price: number;
+  stock: number;
+}
+
 function App() {
-  const [count, setCount] = createSignal(1)
+  const [products, setProducts] = createSignal<Product[]>([])
 
   onMount(async () => {
-    const res = await fetch(`http://127.0.0.1:5000/api/get/product`);
-    setPhotos(await res.json());
+    const res = await fetch(`http://127.0.0.1:5000/api/get/product`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json",},
+      body: JSON.stringify({})
+    });
+    if (!res.ok) {
+      console.error(await res.text())
+      return;
+    }
+    setProducts(await res.json());
+    // console.log(products)
   });
+
+  const headers = createMemo(() => {
+    let products_get = products();
+    if (products_get.length)
+      return Object.keys(products_get[0])
+    else
+      return []
+  })
+
+
 
   return (
     <>
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={solidLogo} class="logo solid" alt="Solid logo" />
-        </a>
+        <table>
+          <thead>
+            <tr>
+              <For each={headers()}>{(header) => <th>{header}</th>}</For>
+            </tr>
+          </thead>
+            <tbody>
+              <For each={products()}>{(product) => {
+                return <tr>{Object.values(product).map((value) => <td>{value}</td> )}</tr>
+              }}</For>
+            </tbody>
+        </table>
       </div>
-      <h1>Vite + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count*2)}>
-          count is {count()}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p class="read-the-docs">
-        Click on the Vite and Solid logos to learn more
-      </p>
     </>
   )
 }
