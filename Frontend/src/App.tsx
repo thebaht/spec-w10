@@ -1,22 +1,12 @@
 import { createSignal, createMemo, onMount, For } from 'solid-js'
 import './App.css'
 
-// function ItemTable() {
-
-// }
-type Product = {
-  id: number;
-  name: string;
-  description: string;
-  image: string;
-  ingredients: string;
-  nutritional_value: string;
-  price: number;
-  stock: number;
+type Record = {
+  [index: string]: boolean | number | string | null
 }
 
 function App() {
-  const [products, setProducts] = createSignal<Product[]>([])
+  const [products, setProducts] = createSignal<Record[]>([])
 
   onMount(async () => {
     const res = await fetch(`http://127.0.0.1:5000/api/get/product`, {
@@ -40,8 +30,6 @@ function App() {
       return []
   })
 
-
-
   return (
     <>
       <div>
@@ -53,7 +41,7 @@ function App() {
           </thead>
             <tbody>
               <For each={products()}>{(product) => {
-                return <tr>{Object.values(product).map((value) => <td>{value}</td> )}</tr>
+                return <tr>{Object.values(product).map((value) => <td>{value?.toString()}</td> )}</tr>
               }}</For>
             </tbody>
         </table>
