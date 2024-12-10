@@ -1,6 +1,5 @@
 from models import Manufacturer, Product, Customer
 
-from typing import Any, List
 import math
 import re
 import polars as pl
@@ -26,7 +25,7 @@ def create_customers():
 
 
 def create_manufacturers_and_products():
-    cereals: List[dict[str, Any]] = pl.read_csv("cereal.csv").to_dicts()
+    cereals = pl.read_csv("cereal.csv").to_dicts()
 
     mfrs = {
         "A": "American Home Food Products",
