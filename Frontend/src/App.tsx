@@ -45,6 +45,11 @@ function App() {
               }}</For>
             </tbody>
         </table>
+        <For each={products()}>
+          {(product) => {
+            return <img src={"product/" + product.image?.toString()} style="max-width: 100px; max-height: 200px; width: auto; height: auto;"></img>
+          }}
+        </For>
       </div>
     </>
   )
