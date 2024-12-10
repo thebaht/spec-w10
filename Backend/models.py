@@ -13,7 +13,7 @@ class Base(DeclarativeBase):
 class Manufacturer(Base):
     __tablename__ = "manufacturer"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(50))
 
     products: Mapped[List["Product"]] = relationship(
         back_populates="manufacturer", cascade="all, delete-orphan"
@@ -22,15 +22,28 @@ class Manufacturer(Base):
 class Product(Base):
     __tablename__ = "product"
     id: Mapped[int] = mapped_column(primary_key=True)
-    manufacturer_id: Mapped[int] = mapped_column(ForeignKey("manufacturer.id"))
-    manufacturer: Mapped["Manufacturer"] = relationship(back_populates="products")
-    name: Mapped[str] = mapped_column(String(30))
-    description: Mapped[str] = mapped_column(String(100))
-    image: Mapped[str] = mapped_column(String(100))
-    ingredients: Mapped[str] = mapped_column(String(100))
-    nutritional_value: Mapped[str] = mapped_column(String(100))
+
+    name: Mapped[str] = mapped_column(String(50))
+    image: Mapped[str] = mapped_column(String(50))
+
     stock: Mapped[int] = mapped_column(default=0)
     price: Mapped[float]
+
+    manufacturer_id: Mapped[int] = mapped_column(ForeignKey("manufacturer.id"))
+    manufacturer: Mapped["Manufacturer"] = relationship(back_populates="products")
+
+    is_hot: Mapped[bool]
+    calories: Mapped[float]
+    protein: Mapped[float]
+    fat: Mapped[float]
+    sodium: Mapped[float]
+    fiber: Mapped[float]
+    carbo: Mapped[float]
+    sugars: Mapped[float]
+    potass: Mapped[float]
+    vitamins: Mapped[float]
+    weight: Mapped[float]
+    cups: Mapped[float]
 
     order_products: Mapped[List["OrderProduct"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"

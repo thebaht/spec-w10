@@ -1,57 +1,9 @@
 from models import Manufacturer, Product, Customer
 
-def create_products():
-    return [
-        Product(
-            manufacturer_id=1,
-            name="frosties",
-            description="corn flakes with sugar",
-            image="/images/placeholder.png",
-            ingredients="corn, sugar",
-            nutritional_value="80g carbohydrates, 15g fat, 5g protein",
-            stock=15,
-            price=30.0
-        ),
-        Product(
-            manufacturer_id=1,
-            name="captain crunch",
-            description="corn flakes with sugar",
-            image="/images/placeholder.png",
-            ingredients="corn, sugar",
-            nutritional_value="80g carbohydrates, 15g fat, 5g protein",
-            stock=15,
-            price=30.0
-        ),
-        Product(
-            manufacturer_id=2,
-            name="cini mini",
-            description="corn flakes with sugar",
-            image="/images/placeholder.png",
-            ingredients="corn, sugar",
-            nutritional_value="80g carbohydrates, 15g fat, 5g protein",
-            stock=15,
-            price=30.0
-        ),
-        Product(
-            manufacturer_id=3,
-            name="lucky charms",
-            description="corn flakes with sugar",
-            image="/images/placeholder.png",
-            ingredients="corn, sugar",
-            nutritional_value="80g carbohydrates, 15g fat, 5g protein",
-            stock=15,
-            price=30.0
-        ),
-
-    ]
-
-
-def create_manufacturers():
-    return [
-        Manufacturer(name="Kelogg"),
-        Manufacturer(name="Quaker"),
-        Manufacturer(name="some other lol")
-    ]
+from typing import Any, List
+import math
+import re
+import polars as pl
 
 def create_customers():
     return [
@@ -72,4 +24,38 @@ def create_customers():
         )
     ]
 
+
+def create_manufacturers_and_products():
+    cereals: List[dict[str, Any]] = pl.read_csv("cereal.csv").to_dicts()
+
+    mfrs = {
+        "A": "American Home Food Products",
+        "G": "General Mills",
+        "K": "Kelloggs",
+        "N": "Nabisco",
+        "P": "Post",
+        "Q": "Quaker Oats",
+        "R": "Ralston Purina",
+    }
+
+    manufacturers: dict[str, Manufacturer] = {}
+    for cereal in cereals:
+        del cereal["shelf"]
+
+        cereal["price"] = math.ceil(cereal.pop("rating"))
+        cereal["stock"] = 10
+
+        cereal["name"] = cereal["name"].replace(";", ",")
+        cereal["image"] = re.sub(r"[^a-zA-Z0-9\s\-\_\.]", "_", cereal["name"]) + '.jpg'
+
+        if cereal["mfr"] not in manufacturers:
+            manufacturers[cereal["mfr"]] = Manufacturer(name=mfrs[cereal["mfr"]])
+
+        cereal["manufacturer"] = manufacturers[cereal.pop("mfr")]
+
+        cereal["is_hot"] = cereal.pop("type") == "H"
+
+    products = [Product(**cereal) for cereal in cereals]
+
+    return list(manufacturers.values()), products
 

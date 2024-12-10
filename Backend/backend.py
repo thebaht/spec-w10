@@ -65,23 +65,12 @@ filter = {
 def populateDB():
     print("Populating database")
     with dbcontext.get_session() as S:  # Start a session with the database
-        def add_references():
-            """Adds predefined reference data (genres, manufacturers, characters) to the database."""
-            refs = [
-                *db_seed.create_manufacturers(),
-            ]
-            print(f"    Added {len(refs)} references")
-            S.add_all(refs)
-        def add_all_items():
-            """Adds predefined items (board games, collectible figures, tabletop figures) to the database."""
-            items = [
-                *db_seed.create_products(),
-                *db_seed.create_customers(),
-            ]
-            print(f"    Added {len(items)} items")
-            S.add_all(items)
-        add_references()
-        add_all_items()
+        S.add_all(db_seed.create_customers())
+
+        manufacturers, products = db_seed.create_manufacturers_and_products()
+        S.add_all(manufacturers)
+        S.add_all(products)
+
         S.commit()  # Commit the changes to the database
 #! ..................................
 
