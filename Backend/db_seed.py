@@ -55,6 +55,9 @@ def create_manufacturers_and_products():
 
         cereal["is_hot"] = cereal.pop("type") == "H"
 
+        cereal["carbohydrates"] = cereal.pop("carbo")
+        cereal["potassium"] = cereal.pop("potass")
+
     products = [Product(**cereal) for cereal in cereals]
 
     return list(manufacturers.values()), products

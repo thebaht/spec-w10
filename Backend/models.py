@@ -33,17 +33,19 @@ class Product(Base):
     manufacturer: Mapped["Manufacturer"] = relationship(back_populates="products")
 
     is_hot: Mapped[bool]
-    calories: Mapped[float]
-    protein: Mapped[float]
-    fat: Mapped[float]
-    sodium: Mapped[float]
-    fiber: Mapped[float]
-    carbo: Mapped[float]
-    sugars: Mapped[float]
-    potass: Mapped[float]
-    vitamins: Mapped[float]
-    weight: Mapped[float]
-    cups: Mapped[float]
+
+    weight: Mapped[float] = mapped_column(comment="[ounce]")
+    cups: Mapped[float] = mapped_column(comment="[cup]")
+
+    calories: Mapped[float] = mapped_column(comment="[kcal]")
+    protein: Mapped[float] = mapped_column(comment="[g]")
+    fat: Mapped[float] = mapped_column(comment="[g]")
+    sodium: Mapped[float] = mapped_column(comment="[mg]")
+    fiber: Mapped[float] = mapped_column(comment="[g]")
+    carbohydrates: Mapped[float] = mapped_column(comment="[g]")
+    sugars: Mapped[float] = mapped_column(comment="[g]")
+    potassium: Mapped[float] = mapped_column(comment="[mg]")
+    vitamins: Mapped[float] = mapped_column(comment="[%]")
 
     order_products: Mapped[List["OrderProduct"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
