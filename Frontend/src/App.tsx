@@ -1,12 +1,13 @@
 import { createSignal, createMemo, onMount, For } from 'solid-js'
 import './App.css'
+import { createStore, unwrap } from 'solid-js/store'
 
 type Record = {
-  [index: string]: boolean | number | string | null
+  [index: string]: null | boolean | number | string
 }
 
 function App() {
-  const [products, setProducts] = createSignal<Record[]>([])
+  const [products, setProducts] = createStore<Record[]>([])
 
   onMount(async () => {
     const res = await fetch(`http://127.0.0.1:5000/api/get/product`, {
@@ -23,12 +24,25 @@ function App() {
   });
 
   const headers = createMemo(() => {
-    let products_get = products();
+    let products_get = products;
     if (products_get.length)
       return Object.keys(products_get[0])
     else
       return []
   })
+
+  const mutate = ({index, key}: {index: number, key: string}) => {
+    let value = unwrap(products)[index][key];
+    switch (typeof(value)) {
+      case 'boolean':
+        setProducts(index, key, !value)
+        break;
+      case 'number':
+        break;
+      case 'string':
+        break;
+    }
+  }
 
   return (
     <>
@@ -40,12 +54,16 @@ function App() {
             </tr>
           </thead>
             <tbody>
-              <For each={products()}>{(product) => {
-                return <tr>{Object.values(product).map((value) => <td>{value?.toString()}</td> )}</tr>
-              }}</For>
+              <For each={products}>{(product, index) =>
+                <tr>
+                  <For each={Object.keys(product)}>{(key) =>
+                    <td onClick={[mutate, {index: index(), key: key}]}>{product[key]?.toString()}</td>
+                  }</For>
+                </tr>
+              }</For>
             </tbody>
         </table>
-        <For each={products()}>
+        <For each={products}>
           {(product) => {
             return <img src={"product/" + product.image?.toString()} style="max-width: 100px; max-height: 200px; width: auto; height: auto;"></img>
           }}
