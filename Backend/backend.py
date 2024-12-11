@@ -5,8 +5,8 @@ from sqlalchemy import and_
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import db_seed
-from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import operators
+from sqlalchemy.orm.collections import InstrumentedList
 import models
 
 # Initialize database context and Flask app
@@ -75,7 +75,7 @@ def populateDB():
 #! ..................................
 
 
-def serialize_model(obj: Base):
+def serialize_model(inst: Base, mappers: List[str] = []):
     """
     Serializes a SQLAlchemy model object into a dictionary, excluding relationship references.
 
@@ -85,11 +85,36 @@ def serialize_model(obj: Base):
     Returns:
         dict: A dictionary representation of the model.
     """
-    return {
-        c.key: getattr(obj, c.key)                      # Map attribute names to their values
-        for c in inspect(obj).mapper.column_attrs       # Get all column attributes
-        if not isinstance(getattr(obj, c.key), Base)    # Exclude nested objects
+
+    table = models.TABLES_GET(inst.__table__.name)
+
+    serialized_columns = {
+        c.name: getattr(inst, c.name) # Map attribute names to their values
+        for c in table.columns        # Get all columns
     }
+
+    def serialize_mapper(name, inst, mappers: List[str]):
+        prefix = f"{name}."
+        mappers = [
+            mapper[len(prefix):]
+            for mapper in mappers
+            if mapper.startswith(prefix)
+        ]
+
+        if hasattr(inst, "__iter__"):
+            return [serialize_model(mapper, mappers) for mapper in inst]
+        else:
+            return serialize_model(inst, mappers)
+
+    serialized_mappers = {
+        mapper: serialize_mapper(mapper, getattr(inst, mapper), mappers)
+        for mapper in mappers
+        if hasattr(inst, mapper)
+    }
+
+    serialized_columns.update(serialized_mappers)
+
+    return serialized_columns
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -167,16 +192,21 @@ def get_items(table_name):
     try:
         # Get the table class from on its name
         table = models.TABLES_GET(table_name).cls
-        if filter := request.json:  # Extract filter criteria from the request body
-            filter = filter.items()
-            # Reformat filter to use as arguments for query
-            filter = filter_build(table, filter)
-            # Query the table with the filter
-            data = session.query(table).filter(and_(*filter)).all()
+
+        mappers = []
+        if request.data:
+            if info := request.json:  # Extract extra request info from the request body
+                if "mappers" in info:
+                    mappers = info.pop("mappers")
+
+                # Reformat filter to use as arguments for query
+                filter = filter_build(table, info)
+                # Query the table with the filter
+                data = session.query(table).filter(and_(*filter)).all()
         else:
             # If no filter, fetch all rows from the table
             data = session.query(table).all()
-        data = [serialize_model(obj)
+        data = [serialize_model(obj, mappers)
                 for obj in data]  # Serialize the query results
     except Exception as e:
         session.rollback()  # Roll back changes if an error occurs
@@ -202,8 +232,14 @@ def get_item(table_name, id):
     session = dbcontext.get_session() # Start a new database session
     table = models.TABLES_GET(table_name).cls # Get the table class from on its name
     try:
+        mappers = []
+        if request.data:
+            if info := request.json:  # Extract extra request info from the request body
+                if "mappers" in info:
+                    mappers = info.pop("mappers")
+
         data = session.query(table).filter(table.id == id).first() # Query the table for the specific item by its ID
-        data = serialize_model(data) # Serialize the query results
+        data = serialize_model(data, mappers) # Serialize the query results
     except Exception as e:
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
