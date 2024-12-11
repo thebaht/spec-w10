@@ -17,9 +17,9 @@ dbcontext.clear_database()      # Clear the database, to avoid duplicate data wh
 app = Flask(__name__)           # Initialize a Flask app instance
 cors = CORS(app)
 
-image_folder = os.path.join(os.getcwd(), 'static', 'images')
-app.config['images'] = image_folder
-os.makedirs(image_folder, exist_ok=True)
+IMAGE_FOLDER = os.path.join(os.getcwd(), 'static', 'images')
+app.config['IMAGE_FOLDER'] = IMAGE_FOLDER
+os.makedirs(IMAGE_FOLDER, exist_ok=True)
 allowed_image_extensions = {'jpg', 'jpeg'}
 
 def validate_image_extention(filename):
@@ -275,15 +275,15 @@ def create_item():
             img = request.files['image']
             if img and validate_image_extention(img.filename):
                 name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
-                path = os.path.join(app.config['images'], name)
+                path = os.path.join(app.config['IMAGE_FOLDER'], name)
                 img.save(path)
                 blueprint['image'] = f"static/images/{name}"
             else:
                 raise Exception('invalid image')
         else:
-            img = os.path.join(app.config['images'], 'default.jpg')
+            img = os.path.join(app.config['IMAGE_FOLDER'], 'default.jpg')
             name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
-            path = os.path.join(app.config['images'], name)
+            path = os.path.join(app.config['IMAGE_FOLDER'], name)
             blueprint['image'] = f"static/images/{name}"
 
         table = models.TABLES_GET(dict.pop("type")).cls
@@ -355,7 +355,7 @@ def update_item(table_name, id):
             img = request.files['image']
             if img and validate_image_extention(img.filename):
                 name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
-                path = os.path.join(app.config['images'], name)
+                path = os.path.join(app.config['IMAGE_FOLDER'], name)
                 img.save(path)
                 blueprint['image'] = f"static/images/{name}"
             else:
