@@ -9,8 +9,10 @@ type Record = {
 function App() {
   const [products, setProducts] = createStore<Record[]>([])
 
+  const backend_url = 'http://127.0.0.1:5000/'
+
   onMount(async () => {
-    const res = await fetch(`http://127.0.0.1:5000/api/get/product`, {
+    const res = await fetch(backend_url+`api/get/product`, {
       method: "POST",
       headers: {"Content-Type": "application/json",},
       body: JSON.stringify({})
@@ -65,7 +67,7 @@ function App() {
         </table>
         <For each={products}>
           {(product) => {
-            return <img src={"product/" + product.image?.toString()} style="max-width: 100px; max-height: 200px; width: auto; height: auto;"></img>
+            return <img src={backend_url+product.image?.toString()} style="max-width: 100px; max-height: 200px; width: auto; height: auto;"></img>
           }}
         </For>
       </div>

@@ -3,6 +3,7 @@ from models import Manufacturer, Product, ProductDetails, Customer
 import math
 import re
 import polars as pl
+import os
 
 def create_customers():
     return [
@@ -44,8 +45,11 @@ def create_manufacturers_and_products():
         cereal["price"] = math.ceil(cereal.pop("rating"))
         cereal["stock"] = 10
 
+        
+
         cereal["name"] = cereal["name"].replace(";", ",")
-        cereal["image"] = re.sub(r"[^a-zA-Z0-9\s\-\_\.]", "_", cereal["name"]) + '.jpg'
+        # cereal["image"] = re.sub(r"[^a-zA-Z0-9\s\-\_\.]", "_", cereal["name"]) + '.jpg'
+        cereal["image"] = os.path.join('static', 'images', re.sub(r"[^a-zA-Z0-9\s\-\_\.]", "_", cereal["name"]) + '.jpg')
 
         if cereal["mfr"] not in manufacturers:
             manufacturers[cereal["mfr"]] = Manufacturer(name=mfrs[cereal["mfr"]])

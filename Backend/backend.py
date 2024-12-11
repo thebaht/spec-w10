@@ -8,6 +8,8 @@ import db_seed
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import operators
 import models
+import os
+import uuid
 
 # Initialize database context and Flask app
 dbcontext = DatabaseContext.get_instance()   # Create an instance of the DatabaseContext class
@@ -15,6 +17,13 @@ dbcontext.clear_database()      # Clear the database, to avoid duplicate data wh
 app = Flask(__name__)           # Initialize a Flask app instance
 cors = CORS(app)
 
+image_folder = os.path.join(os.getcwd(), 'static', 'images')
+app.config['images'] = image_folder
+os.makedirs(image_folder, exist_ok=True)
+allowed_image_extensions = {'jpg', 'jpeg'}
+
+def validate_image_extention(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_image_extensions
 
 operator_map = {     # dictionary to look up operators from a string
     '>': operators.gt,
@@ -226,6 +235,19 @@ def create_item():
     session = dbcontext.get_session() # Start a new database session
     try:
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
+        if request.files:
+            img = request.files['image']
+        else:
+            img = os.path.join(app.config['images'], 'default.jpg')
+        if img and validate_image_extention(img.filename):
+            name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
+            path = os.path.join(app.config['images'], name)
+            if not img.endswith('default.jpg'):
+                img.save(path)
+            blueprint['image'] = f"static/images/{name}"
+        else:
+            raise Exception('invalid image')
+
         table = models.TABLES_GET(dict.pop("type")).cls
         item = table(**dict)
         session.add(item) # Add the new item to the session
@@ -291,6 +313,16 @@ def update_item(table_name, id):
     table = models.TABLES_GET(table_name).cls # Get the table class from on its name
     try:
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
+        if request.files:
+            img = request.files['image']
+            if img:
+                if validate_image_extention(img.filename):
+                    name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
+                    path = os.path.join(app.config['images'], name)
+                    img.save(path)
+                    blueprint['image'] = f"static/images/{name}"
+                else:
+                    raise Exception('invalid image')
         obj = session.query(table).filter(table.id == id).first()
         for key, value in blueprint.items():
             setattr(obj, key, value)
