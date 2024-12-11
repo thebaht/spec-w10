@@ -15,7 +15,7 @@ function App() {
     const res = await fetch(backend_url+`api/get/product`, {
       method: "POST",
       headers: {"Content-Type": "application/json",},
-      body: JSON.stringify({})
+      body: JSON.stringify({"mappers": ["manufacturer", "details"]})
     });
     if (!res.ok) {
       console.error(await res.text())
