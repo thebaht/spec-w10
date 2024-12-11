@@ -32,6 +32,18 @@ class Product(Base):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey("manufacturer.id"))
     manufacturer: Mapped["Manufacturer"] = relationship(back_populates="products")
 
+    details_id: Mapped[int] = mapped_column(ForeignKey("product_details.id"))
+    details: Mapped["ProductDetails"] = relationship(back_populates="product")
+
+    order_products: Mapped[List["OrderProduct"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
+
+class ProductDetails(Base):
+    __tablename__ = "product_details"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product: Mapped["Product"] = relationship(back_populates="details", cascade="all, delete-orphan")
+
     is_hot: Mapped[bool]
 
     weight: Mapped[float] = mapped_column(comment="[ounce]")
@@ -46,10 +58,6 @@ class Product(Base):
     sugars: Mapped[float] = mapped_column(comment="[g]")
     potassium: Mapped[float] = mapped_column(comment="[mg]")
     vitamins: Mapped[float] = mapped_column(comment="[%]")
-
-    order_products: Mapped[List["OrderProduct"]] = relationship(
-        back_populates="product", cascade="all, delete-orphan"
-    )
 
 class OrderProduct(Base):
     __tablename__ = "order_product"

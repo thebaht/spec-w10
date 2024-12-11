@@ -1,4 +1,4 @@
-from models import Manufacturer, Product, Customer
+from models import Manufacturer, Product, ProductDetails, Customer
 
 import math
 import re
@@ -56,6 +56,15 @@ def create_manufacturers_and_products():
 
         cereal["carbohydrates"] = cereal.pop("carbo")
         cereal["potassium"] = cereal.pop("potass")
+
+        cereal_keys = ["name", "image", "stock", "price", "manufacturer", "details"]
+        details = {}
+        for key in [key for key in cereal.keys() if key not in cereal_keys]:
+            details[key] = cereal.pop(key)
+
+        details = ProductDetails(**details)
+
+        cereal["details"] = details
 
     products = [Product(**cereal) for cereal in cereals]
 
