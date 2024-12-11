@@ -1,27 +1,39 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.solid:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+#header {
+  --height: 3em;
+  display: flex;
+  align-items: center;
+  padding: calc(var(--height)*0.1);
+  background: white;
+  border-bottom: 1px solid black;
+  height: var(--height);
 }
 
-.card {
-  padding: 2em;
+#logo {
+  height: 100%;
+  float: left;
 }
 
-.read-the-docs {
-  color: #888;
+#name {
+  padding-left: 10px;
+}
+
+#productView {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.productContainer {
+  display: block;
+  width: 200px;
+}
+
+.productContainer > img {
+  height: 200px;
 }
