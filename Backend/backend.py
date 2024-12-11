@@ -273,16 +273,18 @@ def create_item():
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
         if request.files:
             img = request.files['image']
+            if img and validate_image_extention(img.filename):
+                name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
+                path = os.path.join(app.config['images'], name)
+                img.save(path)
+                blueprint['image'] = f"static/images/{name}"
+            else:
+                raise Exception('invalid image')
         else:
             img = os.path.join(app.config['images'], 'default.jpg')
-        if img and validate_image_extention(img.filename):
             name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
             path = os.path.join(app.config['images'], name)
-            if not img.endswith('default.jpg'):
-                img.save(path)
             blueprint['image'] = f"static/images/{name}"
-        else:
-            raise Exception('invalid image')
 
         table = models.TABLES_GET(dict.pop("type")).cls
         item = table(**dict)
@@ -351,14 +353,13 @@ def update_item(table_name, id):
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
         if request.files:
             img = request.files['image']
-            if img:
-                if validate_image_extention(img.filename):
-                    name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
-                    path = os.path.join(app.config['images'], name)
-                    img.save(path)
-                    blueprint['image'] = f"static/images/{name}"
-                else:
-                    raise Exception('invalid image')
+            if img and validate_image_extention(img.filename):
+                name = str(uuid.uuid4()) + os.path.splitext(img.filename)[1]
+                path = os.path.join(app.config['images'], name)
+                img.save(path)
+                blueprint['image'] = f"static/images/{name}"
+            else:
+                raise Exception('invalid image')
         obj = session.query(table).filter(table.id == id).first()
         for key, value in blueprint.items():
             setattr(obj, key, value)
