@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, For } from 'solid-js'
+import { createSignal, createMemo, onMount, For, Show, JSX } from 'solid-js'
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
 
@@ -51,13 +51,25 @@ type Record = {
 }
 
 function Header() {
+  const [isBoxOpen, setIsBoxOpen] = createSignal(false);
+  
+  const openBox = () => setIsBoxOpen(true);
+  const closeBox = () => setIsBoxOpen(false);
   return <div id="header">
     <img id="logo" src="logo.png"></img>
-    <h2 id="name">Cereal</h2>
+    <h2 id="name">Cereal</h2>  
+    
+    <button onClick={openBox}>create product</button>
+    {isBoxOpen() && (
+        <FloatingBox onClose={closeBox}>
+          <h2>Create Product</h2>
+          <input type="text" placeholder="Type something..." />
+        </FloatingBox>
+      )}
   </div>
 }
 
-function ProductView(props) {
+function ProductView(props: { products: any }) {
   return <div id="productView">
     <For each={props.products}>{(product) =>
       <ProductContainer product={product}/>
@@ -65,12 +77,25 @@ function ProductView(props) {
   </div>
 }
 
-function ProductContainer(props) {
+function ProductContainer(props: { product: { image: string; name: number | boolean | Node | JSX.ArrayElement | (string & {}) | null | undefined } }) {
   return <div class="productContainer">
     <img src={BACKEND_URL+props.product.image}></img>
     <h3 id="product_title">{props.product.name}</h3>
   </div>
 }
+
+function FloatingBox(props) {
+  return (
+    <div class="overlay" onClick={props.onClose}>
+      <div class="box" onClick={(e) => e.stopPropagation()}>
+        {props.children}
+        <button onClick={props.onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+
 
 function App() {
   const [products, setProducts] = createStore<Product[]>([])
@@ -97,6 +122,8 @@ function App() {
       return []
   })
 
+
+
   const mutate = ({index, key}: {index: number, key: string}) => {
     let value = unwrap(products)[index][key];
     if (typeof value === "number") {
@@ -110,9 +137,12 @@ function App() {
     }
   }
 
+
+
   return (
     <>
-      <Header/>
+      <Header/> 
+      
       <ProductView products={products}/>
       <div>
         <table>
@@ -140,5 +170,6 @@ function App() {
     </>
   )
 }
+
 
 export default App
