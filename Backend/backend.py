@@ -226,7 +226,7 @@ def get_items(table_name):
     return jsonify(data), 200  # Return serialized data as a JSON response
 
 
-@app.route('/api/get/<string:table_name>/<int:id>', methods=['GET'])
+@app.route('/api/get/<string:table_name>/<int:id>', methods=['POST'])
 def get_item(table_name, id):
     """
     Retrieves a single item from a specific table by its ID.
