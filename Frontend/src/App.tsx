@@ -79,8 +79,10 @@ function ProductView(props: { products: any }) {
 
 function ProductContainer(props: { product: { image: string; name: number | boolean | Node | JSX.ArrayElement | (string & {}) | null | undefined } }) {
   return <div class="productContainer">
-    <img src={BACKEND_URL+props.product.image}></img>
-    <h3 id="product_title">{props.product.name}</h3>
+    <div>
+      <img src={BACKEND_URL+props.product.image}></img>
+    </div>
+    <h3>{props.product.name}</h3>
   </div>
 }
 

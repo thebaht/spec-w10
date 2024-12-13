@@ -29,14 +29,20 @@
 }
 
 .productContainer {
-  display: block;
   width: 200px;
   padding: 10px;
+  display: block;
 }
 
-.productContainer > img {
-  max-height: 200px;
-  max-width: 100%;
+.productContainer > div {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+}
+
+.productContainer > div > img {
+  object-fit: contain;
 }
 
 
