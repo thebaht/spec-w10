@@ -50,17 +50,13 @@ type Product = {
   details?: ProductDetails
 }
 
-type Record = {
-  [index: string]: null | boolean | number | string
-}
-
 function Error(props: { text: string }) {
   return <div id="error">
     <h1>{props.text}</h1>
   </div>
 }
 
-function ProductView(props: { products: any }) {
+function ProductView(props: { products: Product[] }) {
   return <div id="productView">
     <For each={props.products}>{(product) =>
       <ProductContainer product={product}/>
