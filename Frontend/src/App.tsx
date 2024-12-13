@@ -1,5 +1,5 @@
 import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary, Show } from 'solid-js'
-import { useParams } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
 
@@ -69,12 +69,14 @@ function ProductView(props: { products: any }) {
 }
 
 function ProductContainer(props: { product: { image: string; name: number | boolean | Node | JSX.ArrayElement | (string & {}) | null | undefined } }) {
-  return <div class="productContainer">
-    <div>
-      <img src={BACKEND_URL+props.product.image}></img>
+  return <A href={"/product/" + props.product.id}>
+    <div class="productContainer">
+      <div>
+        <img src={BACKEND_URL+props.product.image}></img>
+      </div>
+      <h3>{props.product.name}</h3>
     </div>
-    <h3>{props.product.name}</h3>
-  </div>
+  </A>
 }
 
 export function MainPage() {
@@ -160,6 +162,45 @@ async function fetchProduct(id: number): Promise<Product> {
   return await res.json()
 }
 
+function ProductPerServing(props: { details: ProductDetails }) {
+  const { details } = props;
+
+  return <table>
+    <thead>
+      <tr>
+        <th>Weight</th>
+        <th>Amount</th>
+
+        <th>Calories</th>
+        <th>Protein</th>
+        <th>Fat</th>
+        <th>Sodium</th>
+        <th>Fiber</th>
+        <th>Carbohydrates</th>
+        <th>Sugars</th>
+        <th>Potassium</th>
+        <th>Vitamins</th>
+      </tr>
+    </thead>
+      <tbody>
+        <tr>
+          <td>{details.weight} oz</td>
+          <td>{details.cups} cups</td>
+
+          <td>{details.calories} kcal</td>
+          <td>{details.protein} g</td>
+          <td>{details.fat} g</td>
+          <td>{details.sodium} mg</td>
+          <td>{details.fiber} g</td>
+          <td>{details.carbohydrates} g</td>
+          <td>{details.sugars} g</td>
+          <td>{details.potassium} mg</td>
+          <td>{details.vitamins} %</td>
+        </tr>
+      </tbody>
+  </table>
+}
+
 function Product(props: { product: Product }) {
   const { product } = props;
 
@@ -170,6 +211,8 @@ function Product(props: { product: Product }) {
   return <div id="product">
     <img src={BACKEND_URL+product.image} />
     <h1>{product.name}</h1>
+    <h2>In a serving</h2>
+    <ProductPerServing details={product.details!}/>
     <h2>Other products by {product.manufacturer!.name}</h2>
     <ProductView products={other_products()}/>
   </div>

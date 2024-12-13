@@ -1,3 +1,17 @@
+input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  margin: 20px;
+  background-color: rgb(68, 68, 138);
+  color: white;
+}
+
 #root {
   width: 100vw;
   height: 100vh;
@@ -93,17 +107,6 @@
   text-align: center;
 }
 
-input {
-  width: 100%;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+#product > img {
+  float: left;
 }
-
-button {
-  margin: 20px;
-  background-color: rgb(68, 68, 138);
-  color: white;
-}
-
