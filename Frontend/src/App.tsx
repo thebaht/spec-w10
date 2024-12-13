@@ -180,3 +180,9 @@ export function Product() {
     <h1>{"Hello, Product #" + params.id + "!"}</h1>
   </>
 }
+
+export function Page404() {
+  return <>
+    <h1>404</h1>
+  </>
+}
