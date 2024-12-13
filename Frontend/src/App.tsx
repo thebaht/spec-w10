@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary } from 'solid-js'
+import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary, Show } from 'solid-js'
 import { useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
@@ -9,7 +9,10 @@ type Manufacturer = {
   id: number
 
   name: string;
+
+  products?: Product[];
 }
+
 type ProductDetails = {
   id: number
 
@@ -74,14 +77,14 @@ function ProductContainer(props: { product: { image: string; name: number | bool
   </div>
 }
 
-export function App() {
+export function MainPage() {
   const [products, setProducts] = createStore<Product[]>([])
 
   onMount(async () => {
     const res = await fetch(BACKEND_URL+`api/get/product`, {
       method: "POST",
       headers: {"Content-Type": "application/json",},
-      body: JSON.stringify({"mappers": ["manufacturer", "details"]})
+      body: JSON.stringify({"mappers": ["manufacturer"]})
     });
     if (!res.ok) {
       console.error(await res.text())
@@ -143,10 +146,12 @@ export function App() {
 }
 
 async function fetchProduct(id: number): Promise<Product> {
+  console.log('fetch');
+  console.log(BACKEND_URL+`api/get/product/`+id);
   const res = await fetch(BACKEND_URL+`api/get/product/`+id, {
     method: "POST",
     headers: {"Content-Type": "application/json",},
-    body: JSON.stringify({"mappers": ["manufacturer", "details"]})
+    body: JSON.stringify({"mappers": ["details", "manufacturer", "manufacturer.products"]})
   })
   if (!res.ok) {
     throw "failed to fetch product";
@@ -155,16 +160,31 @@ async function fetchProduct(id: number): Promise<Product> {
   return await res.json()
 }
 
-export function Product() {
+function Product(props: { product: Product }) {
+  const { product } = props;
+
+  const other_products = () => {
+    return product.manufacturer!.products!.filter((p) => p.id != product.id)
+  }
+
+  return <div id="product">
+    <img src={BACKEND_URL+product.image} />
+    <h1>{product.name}</h1>
+    <h2>Other products by {product.manufacturer!.name}</h2>
+    <ProductView products={other_products()}/>
+  </div>
+}
+
+export function ProductPage() {
   const params = useParams();
 
   const [product] = createResource(() => Number(params.id), fetchProduct);
 
-  return <>
-    <ErrorBoundary fallback={(_err) => <Error text="Unable to load product information"/>}>
-      <h1>{product()?.name}</h1>
-    </ErrorBoundary>
-  </>
+  return <ErrorBoundary fallback={(_err) => <Error text="Unable to load product information"/>}>
+    <Show when={product()}>
+      <Product product={product()!}/>
+    </Show>
+  </ErrorBoundary>
 }
 
 export function Page404() {

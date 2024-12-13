@@ -1,13 +1,13 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
 import { Router, Route } from "@solidjs/router";
-import { createSignal, Show } from 'solid-js'
+import { createSignal, JSX, Show } from 'solid-js'
 import './index.css'
-import { Page404, App, Product } from './App.tsx'
+import { Page404, MainPage, ProductPage } from './App.tsx'
 
 const root = document.getElementById('root')
 
-function FloatingBox(props) {
+function FloatingBox(props: { onClose: () => any, children: JSX.Element }) {
     return (
       <div class="overlay" onClick={props.onClose}>
         <div onClick={(e) => e.stopPropagation()}>
@@ -41,8 +41,8 @@ render(() => (
         <>
             <Header/>
             <Router>
-                <Route path="/" component={App} />
-                <Route path="/product/:id" component={Product} matchFilters={{id: /^\d+$/}} />
+                <Route path="/" component={MainPage} />
+                <Route path="/product/:id" component={ProductPage} matchFilters={{id: /^\d+$/}} />
                 <Route path="*" component={Page404} />
             </Router>
         </>
