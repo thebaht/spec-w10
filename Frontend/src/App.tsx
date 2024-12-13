@@ -68,7 +68,7 @@ function ProductView(props: { products: any }) {
   </div>
 }
 
-function ProductContainer(props: { product: { image: string; name: number | boolean | Node | JSX.ArrayElement | (string & {}) | null | undefined } }) {
+function ProductContainer(props: { product: Product }) {
   return <A href={"/product/" + props.product.id}>
     <div class="productContainer">
       <div>
