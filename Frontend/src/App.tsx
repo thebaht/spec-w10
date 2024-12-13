@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, For, JSX } from 'solid-js'
+import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary } from 'solid-js'
 import { useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
@@ -49,6 +49,12 @@ type Product = {
 
 type Record = {
   [index: string]: null | boolean | number | string
+}
+
+function Error(props: { text: string }) {
+  return <div id="error">
+    <h1>{props.text}</h1>
+  </div>
 }
 
 function ProductView(props: { products: any }) {
@@ -136,10 +142,28 @@ export function App() {
   )
 }
 
+async function fetchProduct(id: number): Promise<Product> {
+  const res = await fetch(BACKEND_URL+`api/get/product/`+id, {
+    method: "POST",
+    headers: {"Content-Type": "application/json",},
+    body: JSON.stringify({"mappers": ["manufacturer", "details"]})
+  })
+  if (!res.ok) {
+    throw "failed to fetch product";
+  }
+
+  return await res.json()
+}
+
 export function Product() {
   const params = useParams();
+
+  const [product] = createResource(() => Number(params.id), fetchProduct);
+
   return <>
-    <h1>{"Hello, Product #" + params.id + "!"}</h1>
+    <ErrorBoundary fallback={(_err) => <Error text="Unable to load product information"/>}>
+      <h1>{product()?.name}</h1>
+    </ErrorBoundary>
   </>
 }
 
