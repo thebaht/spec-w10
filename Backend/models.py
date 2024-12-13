@@ -63,11 +63,9 @@ class OrderProduct(Base):
     __tablename__ = "order_product"
     id: Mapped[int] = mapped_column(primary_key=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("order.id"))
-    order: Mapped["Product"] = relationship(back_populates="order_products")
+    order: Mapped["Order"] = relationship(back_populates="order_products")
     product_id: Mapped[int] = mapped_column(ForeignKey("product.id"))
     product: Mapped["Product"] = relationship(back_populates="order_products")
-    order_id: Mapped[int] = mapped_column(ForeignKey("order.id"))
-    order: Mapped["Order"] = relationship(back_populates="order_products")
     quantity: Mapped[int]
 
 class Order(Base):
