@@ -87,7 +87,7 @@ function ProductContainer(props: { product: { image: string; name: number | bool
 function FloatingBox(props) {
   return (
     <div class="overlay" onClick={props.onClose}>
-      <div class="box" onClick={(e) => e.stopPropagation()}>
+      <div onClick={(e) => e.stopPropagation()}>
         {props.children}
         <button onClick={props.onClose}>Close</button>
       </div>
