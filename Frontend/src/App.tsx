@@ -1,5 +1,5 @@
 import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary, Show } from 'solid-js'
-import { A, useParams } from "@solidjs/router";
+import { A, action, useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
 
@@ -48,6 +48,21 @@ type Product = {
 
   details_id: number
   details?: ProductDetails
+}
+
+type OrderProduct = {
+  product_id: number;
+  quantity: number;
+}
+
+type Order = {
+  price: number;
+  timestamp: Date;
+  customer_id: number;
+  address: string;
+  status: string;
+
+  order_products: OrderProduct[]
 }
 
 function Error(props: { text: string }) {
@@ -200,6 +215,27 @@ function ProductPerServing(props: { details: ProductDetails }) {
 function Product(props: { product: Product }) {
   const { product } = props;
 
+  const buy = action(async (data) => {
+    const order: Order = {
+      price: 100.0,
+      timestamp: new Date(),
+      customer_id: 1,
+      address: "Et sted",
+      status: "Købt",
+
+      order_products: [{
+        product_id: product.id,
+        quantity: 1,
+      }]
+    }
+
+    const res = await fetch(BACKEND_URL+`api/order`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json",},
+      body: JSON.stringify(order)
+    })
+  })
+
   const other_products = () => {
     return product.manufacturer!.products!.filter((p) => p.id != product.id)
   }
@@ -207,6 +243,9 @@ function Product(props: { product: Product }) {
   return <div id="product">
     <img src={BACKEND_URL+product.image} />
     <h1>{product.name}</h1>
+    <form action={buy} method="post">
+      <button type="submit">Buy</button>
+    </form>
     <h2>In a serving</h2>
     <ProductPerServing details={product.details!}/>
     <h2>Other products by {product.manufacturer!.name}</h2>

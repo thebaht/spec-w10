@@ -312,10 +312,13 @@ def order():
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
         order_products = blueprint.pop("order_products")
 
-        order = Order(**blueprint)
-        session.add(order)
+        blueprint["timestamp"] = datetime.fromisoformat(blueprint["timestamp"])
 
-        order.order_products = [OrderProduct(order_id=order.id, *order_product) for order_product in order_products]
+        order = Order(**blueprint)
+
+        order.order_products = [OrderProduct(order_id=order.id, **order_product) for order_product in order_products]
+
+        session.add(order)
 
         for orderproduct in order.order_products:
             if orderproduct.product.stock >= orderproduct.quantity:
