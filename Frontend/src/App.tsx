@@ -52,20 +52,20 @@ type Record = {
 
 function Header() {
   const [isBoxOpen, setIsBoxOpen] = createSignal(false);
-  
+
   const openBox = () => setIsBoxOpen(true);
   const closeBox = () => setIsBoxOpen(false);
   return <div id="header">
     <img id="logo" src="logo.png"></img>
-    <h2 id="name">Cereal</h2>  
-    
+    <h2 id="name">Cereal</h2>
+
     <button onClick={openBox}>create product</button>
-    {isBoxOpen() && (
-        <FloatingBox onClose={closeBox}>
-          <h2>Create Product</h2>
-          <input type="text" placeholder="Type something..." />
-        </FloatingBox>
-      )}
+    <Show when={isBoxOpen()}>
+      <FloatingBox onClose={closeBox}>
+        <h2>Create Product</h2>
+        <input type="text" placeholder="Type something..." />
+      </FloatingBox>
+    </Show>
   </div>
 }
 
