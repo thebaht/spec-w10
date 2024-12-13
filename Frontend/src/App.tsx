@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, For, Show, JSX } from 'solid-js'
+import { createSignal, createMemo, onMount, For, JSX } from 'solid-js'
 import { useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
@@ -51,25 +51,6 @@ type Record = {
   [index: string]: null | boolean | number | string
 }
 
-function Header() {
-  const [isBoxOpen, setIsBoxOpen] = createSignal(false);
-
-  const openBox = () => setIsBoxOpen(true);
-  const closeBox = () => setIsBoxOpen(false);
-  return <div id="header">
-    <img id="logo" src="logo.png"></img>
-    <h2 id="name">Cereal</h2>
-
-    <button onClick={openBox}>create product</button>
-    <Show when={isBoxOpen()}>
-      <FloatingBox onClose={closeBox}>
-        <h2>Create Product</h2>
-        <input type="text" placeholder="Type something..." />
-      </FloatingBox>
-    </Show>
-  </div>
-}
-
 function ProductView(props: { products: any }) {
   return <div id="productView">
     <For each={props.products}>{(product) =>
@@ -86,19 +67,6 @@ function ProductContainer(props: { product: { image: string; name: number | bool
     <h3>{props.product.name}</h3>
   </div>
 }
-
-function FloatingBox(props) {
-  return (
-    <div class="overlay" onClick={props.onClose}>
-      <div onClick={(e) => e.stopPropagation()}>
-        {props.children}
-        <button onClick={props.onClose}>Close</button>
-      </div>
-    </div>
-  );
-}
-
-
 
 export function App() {
   const [products, setProducts] = createStore<Product[]>([])
@@ -125,8 +93,6 @@ export function App() {
       return []
   })
 
-
-
   const mutate = ({index, key}: {index: number, key: string}) => {
     let value = unwrap(products)[index][key];
     if (typeof value === "number") {
@@ -140,12 +106,8 @@ export function App() {
     }
   }
 
-
-
   return (
     <>
-      <Header/> 
-      
       <ProductView products={products}/>
       <div>
         <table>
