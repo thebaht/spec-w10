@@ -1,4 +1,5 @@
 import { createSignal, createMemo, onMount, For, Show, JSX } from 'solid-js'
+import { useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
 
@@ -99,7 +100,7 @@ function FloatingBox(props) {
 
 
 
-function App() {
+export function App() {
   const [products, setProducts] = createStore<Product[]>([])
 
   onMount(async () => {
@@ -173,5 +174,9 @@ function App() {
   )
 }
 
-
-export default App
+export function Product() {
+  const params = useParams();
+  return <>
+    <h1>{"Hello, Product #" + params.id + "!"}</h1>
+  </>
+}

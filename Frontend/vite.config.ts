@@ -3,4 +3,12 @@ import solid from 'vite-plugin-solid'
 
 export default defineConfig({
   plugins: [solid()],
+  // build: {
+  //   rollupOptions: {
+  //     input: {
+  //       main: 'index.html',
+  //       product: 'index.html',
+  //     },
+  //   },
+  // },
 })
