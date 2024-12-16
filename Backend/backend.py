@@ -2,7 +2,7 @@ import json
 import sys
 from dbcontext import *
 from sqlalchemy import and_
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 import db_seed
 from sqlalchemy.sql import operators
@@ -10,12 +10,27 @@ from sqlalchemy.orm.collections import InstrumentedList
 import models
 import os
 import uuid
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies
+from functools import wraps
+from datetime import timedelta
 
 # Initialize database context and Flask app
 dbcontext = DatabaseContext.get_instance()   # Create an instance of the DatabaseContext class
 dbcontext.clear_database()      # Clear the database, to avoid duplicate data when populating
 app = Flask(__name__)           # Initialize a Flask app instance
 cors = CORS(app)
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"])  # Update with your frontend URL
+
+bcrypt = Bcrypt(app)
+app.config['JWT_VERIFY_SUB'] = False
+app.config['JWT_SECRET_KEY'] = 'asd'
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+app.config['JWT_COOKIE_SECURE'] = False
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+jwt = JWTManager(app)
 
 IMAGE_FOLDER = os.path.join(os.getcwd(), 'static', 'images')
 app.config['IMAGE_FOLDER'] = IMAGE_FOLDER
@@ -176,19 +191,26 @@ def tables_item():
     return json.dumps(models.ITEMS, cls=EnhancedJSONEncoder), 200 # Return serialized data as a JSON response
 
 
-#! ---------------------------------------------------------
-# get product
-# get products
-# create product
-# update product
-# delete product
+def admin_required(f):
+    """
+    Decorator that ensures the user has admin rights.
+    """
+    @wraps(f)
+    def check_admin(*args, **kwargs):
+        session = dbcontext.get_session()
+        table = models.TABLES_GET('user').cls
+        user_id = get_jwt_identity().get('id')
+        if not session.query(table).filter(table.id == user_id).first().admin:
+            return jsonify({'message': 'Admin rights are required to access this endpoint!'}), 403
+        return f(*args, **kwargs)
+    return check_admin
 
-# create order
-# create user
-# login user
-#! ---------------------------------------------------------
-
-
+@app.route('/api/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    current_user = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_user)
+    return jsonify(access_token=new_access_token), 200
 
 
 @app.route('/api/get/<string:table_name>', methods=['POST'])
@@ -260,7 +282,9 @@ def get_item(table_name, id):
 
 
 
-@app.route('/api/create', methods=['POST'])
+@app.route('/api/create', methods=['POST'], endpoint='create_entry')
+@jwt_required()
+@admin_required
 def create_item():
     """
     Creates a new item in the database based on the JSON in the request body.
@@ -286,8 +310,8 @@ def create_item():
             path = os.path.join(app.config['IMAGE_FOLDER'], name)
             blueprint['image'] = f"static/images/{name}"
 
-        table = models.TABLES_GET(dict.pop("type")).cls
-        item = table(**dict)
+        table = models.TABLES_GET(blueprint.pop("type")).cls
+        item = table(**blueprint)
         session.add(item) # Add the new item to the session
         data = serialize_model(item) # Serialize the created item
     except Exception as e:
@@ -320,7 +344,10 @@ def order():
 
         session.add(order)
 
+        session.merge(order)
+
         for orderproduct in order.order_products:
+            print(orderproduct.product)
             if orderproduct.product.stock >= orderproduct.quantity:
                 orderproduct.product.stock -= orderproduct.quantity
             else:
@@ -337,7 +364,9 @@ def order():
 
 
 
-@app.route('/api/update/<string:table_name>/<int:id>', methods=['PUT'])
+@app.route('/api/update/<string:table_name>/<int:id>', methods=['PUT'], endpoint='update_entry')
+@jwt_required()
+@admin_required
 def update_item(table_name, id):
     """
     Updates an existing item in a specific table by its ID.
@@ -377,7 +406,9 @@ def update_item(table_name, id):
 
 
 
-@app.route('/api/delete/<string:table_name>/<int:id>', methods=['DELETE'])
+@app.route('/api/delete/<string:table_name>/<int:id>', methods=['DELETE'], endpoint='delete_entry')
+@jwt_required()
+@admin_required
 def delete_item(table_name, id):
     """
     Removes an item from the database in a specific table by its ID.
@@ -401,6 +432,132 @@ def delete_item(table_name, id):
         _commit(session) # Commit transaction to database
         session.close() # Close the session
     return "deleted", 200 # Return a success message
+
+
+@app.route('/api/user', methods=['POST'])
+def create_user():
+    session = dbcontext.get_session()
+    try:
+        table = models.TABLES_GET('user').cls
+        blueprint = dict(request.json.items())
+        blueprint['password'] = bcrypt.generate_password_hash(blueprint['password']).decode('utf-8')
+        user = table(**blueprint)
+        # email = request.args.get("email")
+        # password = bcrypt.generate_password_hash(request.args.get("password")).decode('utf-8')
+        # user = table(email=email, password=password)
+
+        session.add(user)
+        session.commit()
+        access_token = create_access_token(identity={'id': user.id, 'email': user.email})
+        refresh_token = create_refresh_token(identity={'id': user.id, 'email': user.email})
+        user.token = access_token
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    response = Response(
+        json.dumps({access_token: access_token, refresh_token: refresh_token}),
+        mimetype="application/json",
+        headers={
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET,PUT,POST,DELETE,UPDATE,OPTIONS",
+            "access-control-allow-origin": "http://localhost:5173",
+        }
+    )
+
+    set_access_cookies(response, access_token)
+    # set_access_cookies(response, refresh_token)
+
+    # cookies = {access_token: access_token, refresh_token: refresh_token}
+    # for name, value in cookies.items():
+    #     exp = get_jwt(access_token).get('exp')
+    #     response.set_cookie(key=name, value=value, expires=exp, secure=True, httponly=True)
+
+    return response, 200 # Return a success message
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    session = dbcontext.get_session()
+    try:
+        table = models.TABLES_GET('user').cls
+
+        blueprint = dict(request.json.items())
+        user = session.query(table).filter(table.email == blueprint['email']).first()
+        if not user or not bcrypt.check_password_hash(user.password, blueprint['password']):
+            raise Exception("invalid login")
+
+        # email = request.args.get("email")
+        # password = request.args.get("password")
+        # user = session.query(table).filter(table.email == email).first()
+        # if not user or not bcrypt.check_password_hash(user.password, password):
+        #     raise Exception("invalid login")
+
+        access_token = create_access_token(identity={'id': user.id, 'email': user.email})
+        refresh_token = create_refresh_token(identity={'id': user.id, 'email': user.email})
+        user.token = access_token
+
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+
+    response = Response(
+        json.dumps({access_token: access_token, refresh_token: refresh_token}),
+        mimetype="application/json",
+    )
+
+    set_access_cookies(response, access_token)
+    # set_access_cookies(response, refresh_token)
+
+    # cookies = {access_token: access_token, refresh_token: refresh_token}
+    # for name, value in cookies.items():
+    #     exp = get_jwt(access_token).get('exp')
+    #     response.set_cookie(key=name, value=value, expires=exp, secure=True, httponly=True)
+
+    return response, 200 # Return a success message
+
+@app.route('/api/user/info', methods=['POST'], endpoint='set_user_information')
+@jwt_required()
+def set_user_information():
+    session = dbcontext.get_session()
+    try:
+        table = models.TABLES_GET('user').cls
+
+        blueprint = dict(request.json.items())
+        user = session.query(table).filter(table.id == id).first()
+        for key, value in blueprint.items():
+            setattr(user, key, value)
+
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return jsonify(user.id), 200 # Return a success message
+
+
+@app.route('/api/user/info', methods=['GET'], endpoint='get_user_information')
+@jwt_required()
+def get_user_information():
+    session = dbcontext.get_session()
+    try:
+        table = models.TABLES_GET('user').cls
+        id = get_jwt_identity().get('id')
+        user = session.query(table).filter(table.id == id).first()
+        mappers = ['orders']
+        data = serialize_model(user, mappers)
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return jsonify(data), 200 # Return a success message
 
 
 @app.route('/api/istestmode')

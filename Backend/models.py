@@ -71,26 +71,35 @@ class OrderProduct(Base):
 class Order(Base):
     __tablename__ = "order"
     id: Mapped[int] = mapped_column(primary_key=True)
-    price: Mapped[float]
-    timestamp: Mapped[datetime]
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customer.id"))
-    customer: Mapped["Customer"] = relationship(back_populates="orders")
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=True)
+    user: Mapped["User"] = relationship(back_populates="orders")
+
+    email: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(100))
     address: Mapped[str] = mapped_column(String(100))
+
+    timestamp: Mapped[datetime]
+    price: Mapped[float]
     status: Mapped[str] = mapped_column(String(30))
 
     order_products: Mapped[List["OrderProduct"]] = relationship(
         back_populates="order", cascade="all, delete-orphan"
     )
 
-class Customer(Base):
-    __tablename__ = "customer"
+class User(Base):
+    __tablename__ = "user"
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(100))
-    name: Mapped[str] = mapped_column(String(100))
-    address: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str] = mapped_column(String(100), unique=True)
+    password: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
+    address: Mapped[str] = mapped_column(String(100), nullable=True)
+    admin: Mapped[bool] = False
+    token: Mapped[str] = mapped_column(String(1000), nullable=True)
+    token_expiration: Mapped[datetime] = mapped_column(nullable=True)
 
     orders: Mapped[List["Order"]] = relationship(
-        back_populates="customer", cascade="all, delete-orphan"
+        back_populates="user", cascade="all, delete-orphan"
     )
 
 @dataclass

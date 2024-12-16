@@ -35,9 +35,14 @@ button {
   border-bottom: 1px solid black;
 }
 
+#home {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
 #logo {
   height: 100%;
-  float: left;
 }
 
 #name {

@@ -1,4 +1,4 @@
-from models import Manufacturer, Product, ProductDetails, Customer
+from models import Manufacturer, Product, ProductDetails, User
 
 import math
 import re
@@ -7,20 +7,24 @@ import os
 
 def create_customers():
     return [
-        Customer(
+        User(
             name="jens bo",
+            password="password",
             email="jens@email.com",
-            address="jensvej 41, 9999 by, land"
+            address="jensvej 41, 9999 by, land",
         ),
-        Customer(
+        User(
             name="bob chris",
+            password="123",
             email="ogbob@email.com",
-            address="street 1, 9999 by, land"
+            address="street 1, 9999 by, land",
         ),
-        Customer(
+        User(
             name="Heihachi Mishima",
+            password="eiuvnyq3oct9843mc 98ry32q04xt743q9y",
             email="Tekken@ironfist.com",
-            address="Tekken tower, 9999 by, land"
+            address="Tekken tower, 9999 by, land",
+            admin=True,
         )
     ]
 
@@ -44,8 +48,6 @@ def create_manufacturers_and_products():
 
         cereal["price"] = math.ceil(cereal.pop("rating"))
         cereal["stock"] = 10
-
-        
 
         cereal["name"] = cereal["name"].replace(";", ",")
         # cereal["image"] = re.sub(r"[^a-zA-Z0-9\s\-\_\.]", "_", cereal["name"]) + '.jpg'

@@ -1,9 +1,9 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
-import { Router, Route } from "@solidjs/router";
+import { Router, Route, A, RouteSectionProps } from "@solidjs/router";
 import { createSignal, JSX, Show } from 'solid-js'
 import './index.css'
-import { Page404, MainPage, ProductPage } from './App.tsx'
+import { Page404, MainPage, ProductPage, LoginPage } from './App.tsx'
 
 const root = document.getElementById('root')
 
@@ -24,8 +24,10 @@ function Header() {
   const openBox = () => setIsBoxOpen(true);
   const closeBox = () => setIsBoxOpen(false);
   return <div id="header">
-    <img id="logo" src="/logo.png"></img>
-    <h2 id="name">Cereal</h2>
+    <A id="home" href={"/"}>
+      <img id="logo" src="/logo.png"></img>
+      <h2 id="name">Cereal</h2>
+    </A>
 
     <button onClick={openBox}>create product</button>
     <Show when={isBoxOpen()}>
@@ -34,16 +36,26 @@ function Header() {
       <input type="text" placeholder="Type something..." />
     </FloatingBox>
     </Show>
+    <A href={"/login"}>Login</A>
   </div>
 }
+
+const Layout = (props: RouteSectionProps) => {
+  return (
+      <>
+          <Header/>
+          {props.children}
+      </>
+  );
+};
 
 render(
   () => (
     <>
-      <Header/>
-      <Router>
+      <Router root={Layout}>
         <Route path="/" component={MainPage} />
         <Route path="/product/:id" component={ProductPage} matchFilters={{id: /^\d+$/}} />
+        <Route path="/login" component={LoginPage} />
         <Route path="*" component={Page404} />
       </Router>
     </>
