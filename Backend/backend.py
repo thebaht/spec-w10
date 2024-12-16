@@ -11,7 +11,7 @@ import models
 import os
 import uuid
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies, unset_jwt_cookies, unset_access_cookies
 from functools import wraps
 from datetime import timedelta
 
@@ -30,6 +30,7 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 app.config['JWT_COOKIE_SECURE'] = False
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+app.config["JWT_CSRF_IN_COOKIES"] = False
 jwt = JWTManager(app)
 
 IMAGE_FOLDER = os.path.join(os.getcwd(), 'static', 'images')
@@ -190,6 +191,19 @@ def tables_item():
     """
     return json.dumps(models.ITEMS, cls=EnhancedJSONEncoder), 200 # Return serialized data as a JSON response
 
+def user_required(f):
+    """
+    Decorator that ensures the user has admin rights.
+    """
+    @wraps(f)
+    def check_user(*args, **kwargs):
+        session = dbcontext.get_session()
+        user_id = get_jwt_identity().get('id')
+        user = session.query(models.User).filter(models.User.id == user_id).first()
+        if not user or user.token != request.cookies.get('access_token_cookie'):
+            return jsonify({'message': 'Need to be logged to access this endpoint!'}), 403
+        return f(*args, **kwargs)
+    return check_user
 
 def admin_required(f):
     """
@@ -519,6 +533,29 @@ def login():
     #     response.set_cookie(key=name, value=value, expires=exp, secure=True, httponly=True)
 
     return response, 200 # Return a success message
+
+
+@app.route('/api/logout', methods=['POST'])
+@jwt_required()
+@user_required
+def logout():
+    session = dbcontext.get_session()
+    try:
+        id = get_jwt_identity().get('id')
+        user = session.query(models.User).filter(models.User.id == id).first()
+        user.token = None
+        response = jsonify(msg="Logout successful")
+        unset_jwt_cookies(response)
+        unset_access_cookies(response)
+
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return response, 200
+
 
 @app.route('/api/user/info', methods=['POST'], endpoint='set_user_information')
 @jwt_required()

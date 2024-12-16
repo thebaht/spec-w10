@@ -276,12 +276,21 @@ export function LoginPage() {
     });
   });
 
+  const logout = action(async (data) => {
+    console.log("lotout");
+    const res = await fetch(BACKEND_URL+`api/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  });
+
   return <form action={login} method="post" >
     <input name="email" type="email" required></input>
     <input name="password" type="password" required></input>
     <button type="submit" formaction={login}>Login</button>
     <button type="submit" formaction={signup}>Signup</button>
     <button type="submit" formaction={test}>Test</button>
+    <button type="submit" formaction={logout}>Logout</button>
   </form>
 }
 

@@ -96,7 +96,6 @@ class User(Base):
     address: Mapped[str] = mapped_column(String(100), nullable=True)
     admin: Mapped[bool] = False
     token: Mapped[str] = mapped_column(String(1000), nullable=True)
-    token_expiration: Mapped[datetime] = mapped_column(nullable=True)
 
     orders: Mapped[List["Order"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
