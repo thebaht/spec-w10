@@ -121,7 +121,6 @@ render(
       <Router root={Layout}>
         <Route path="/" component={MainPage} />
         <Route path="/product/:id" component={ProductPage} matchFilters={{id: /^\d+$/}} />
-        <Route path="/login" component={LoginPage} />
         <Route path="*" component={Page404} />
       </Router>
     </>
