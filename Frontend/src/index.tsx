@@ -1,9 +1,9 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
 import { Router, Route, A, RouteSectionProps } from "@solidjs/router";
-import { createSignal, JSX, Show } from 'solid-js'
+import { createSignal, JSX, onMount, Show } from 'solid-js'
 import './index.css'
-import { Page404, MainPage, ProductPage, LoginPage } from './App.tsx'
+import { Page404, MainPage, ProductPage, LoginPage, BACKEND_URL } from './App.tsx'
 import { makePersisted } from '@solid-primitives/storage';
 import { createStore } from 'solid-js/store';
 
@@ -64,8 +64,21 @@ export const [cart, setCart, initCart] = makePersisted(createStore<CartProduct[]
 export const [user, setUser, initUser] = makePersisted(createSignal<User | undefined>({email: ""}), {name: "user"});
 
 render(
-  () => (
-    <>
+  () => {
+    onMount(async () => {
+      const res = await fetch(BACKEND_URL+`api/user/email`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setUser({email: await res.text()});
+      }
+      else {
+        setUser(undefined)
+      }
+    });
+
+    return <>
       <Router root={Layout}>
         <Route path="/" component={MainPage} />
         <Route path="/product/:id" component={ProductPage} matchFilters={{id: /^\d+$/}} />
@@ -73,6 +86,6 @@ render(
         <Route path="*" component={Page404} />
       </Router>
     </>
-  ),
+  },
   root!
 )

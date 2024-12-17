@@ -5,7 +5,7 @@ import { createStore, unwrap } from 'solid-js/store'
 import { jwtDecode }  from 'jwt-decode';
 import { cart, setCart, setUser, user } from './index.tsx'
 
-const BACKEND_URL = 'http://127.0.0.1:5000/'
+export const BACKEND_URL = 'http://127.0.0.1:5000/'
 
 type Manufacturer = {
   id: number

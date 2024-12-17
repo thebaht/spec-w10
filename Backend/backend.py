@@ -26,7 +26,7 @@ CORS(
     methods=["GET","PUT","POST","DELETE","UPDATE", "OPTIONS"],
     origins="http://localhost:5173",
     allow_headers=["Content-Type"],
-)  
+)
 
 @app.after_request
 def creds(response):
@@ -552,6 +552,23 @@ def logout():
         _commit(session) # Commit transaction to database
         session.close() # Close the session
     return response, 200
+
+@app.route('/api/user/email', methods=['POST'], endpoint='get_user_email')
+@jwt_required()
+@user_required
+def get_user_email():
+    session = dbcontext.get_session()
+    try:
+        id = get_jwt_identity().get('id')
+        user = session.query(models.User).filter(models.User.id == id).first()
+        email = user.email
+    except Exception as e:
+        session.rollback() # Roll back changes if an error occurs
+        return str(e), 400 # Return error message with 400 status code
+    finally:
+        _commit(session) # Commit transaction to database
+        session.close() # Close the session
+    return email, 200 # Return a success message
 
 
 @app.route('/api/user/info', methods=['POST'], endpoint='set_user_information')
