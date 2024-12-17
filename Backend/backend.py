@@ -95,6 +95,13 @@ def populateDB():
         manufacturers, products = db_seed.create_manufacturers_and_products()
         S.add_all(manufacturers)
         S.add_all(products)
+        
+        admin_acc = User(
+            email="a@a",
+            password=bcrypt.generate_password_hash('123').decode('utf-8'),
+            admin=True,
+        )
+        S.add(admin_acc)
 
         S.commit()  # Commit the changes to the database
 #! ..................................

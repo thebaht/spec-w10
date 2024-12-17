@@ -4,14 +4,10 @@ import math
 import re
 import polars as pl
 import os
+from flask_bcrypt import Bcrypt
 
 def create_customers():
     return [
-        User(
-            email="admin",
-            password="123",
-            admin=True,
-        ),
         User(
             name="jens bo",
             password="password",
