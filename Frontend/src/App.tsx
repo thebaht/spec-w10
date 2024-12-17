@@ -3,6 +3,7 @@ import { A, action, useParams } from "@solidjs/router";
 import './App.css'
 import { createStore, unwrap } from 'solid-js/store'
 import { jwtDecode }  from 'jwt-decode';
+import { cart, setCart, setUser, user } from './index.tsx'
 
 const BACKEND_URL = 'http://127.0.0.1:5000/'
 
@@ -227,15 +228,6 @@ export function ProductPage() {
   </ErrorBoundary>
 }
 
-export function getCookie(name: string) {
-  const value = "; " + document.cookie;
-  const parts = value.split("; " + name + "=");
-
-  if (parts.length == 2) {
-      return parts.pop().split(";").shift();
-  }
-}
-
 export function LoginPage() {
   const access = async (endpoint: string, data: URLSearchParams) => {
     const res = await fetch(endpoint, {
@@ -245,13 +237,10 @@ export function LoginPage() {
       credentials: "include",
     });
 
-    const json = await res.json();
-    localStorage.setItem('access_token', json.access_token)
-    const decoded: { exp: number } = jwtDecode(json.access_token)
-
-    const date = new Date(decoded.exp*1000);
-
-    console.log(json);
+    if (res.ok) {
+      setUser({email: data.get("email")!})
+    }
+    return { body: await res.json(), ok: res.ok };
   }
 
   const login = action(async (data) => {
@@ -263,25 +252,24 @@ export function LoginPage() {
   });
 
   const test = action(async (data) => {
-    console.log("asdf");
     const res = await fetch(BACKEND_URL+`api/delete/product/1`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        // "X-CSRF-TOKEN": getCookie("csrf_access_token"),
       },
       body: JSON.stringify(Object.fromEntries(data)),
-      // mode: "cors",
       credentials: "include",
     });
   });
 
   const logout = action(async (data) => {
-    console.log("lotout");
     const res = await fetch(BACKEND_URL+`api/logout`, {
       method: "POST",
       credentials: "include",
     });
+    if (res.ok) {
+      setUser(undefined);
+    }
   });
 
   return <form action={login} method="post" >

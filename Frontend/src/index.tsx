@@ -4,6 +4,8 @@ import { Router, Route, A, RouteSectionProps } from "@solidjs/router";
 import { createSignal, JSX, Show } from 'solid-js'
 import './index.css'
 import { Page404, MainPage, ProductPage, LoginPage } from './App.tsx'
+import { makePersisted } from '@solid-primitives/storage';
+import { createStore } from 'solid-js/store';
 
 const root = document.getElementById('root')
 
@@ -48,6 +50,18 @@ const Layout = (props: RouteSectionProps) => {
       </>
   );
 };
+
+type CartProduct = {
+  id: number;
+  quantity: number;
+}
+
+type User = {
+  email: string;
+}
+
+export const [cart, setCart, initCart] = makePersisted(createStore<CartProduct[]>([]), {name: "cart"});
+export const [user, setUser, initUser] = makePersisted(createSignal<User | undefined>({email: ""}), {name: "user"});
 
 render(
   () => (
