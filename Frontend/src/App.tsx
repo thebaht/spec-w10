@@ -260,17 +260,7 @@ export function LoginPage() {
       body: JSON.stringify(Object.fromEntries(data)),
       credentials: "include",
     });
-  });
-
-  const logout = action(async (data) => {
-    const res = await fetch(BACKEND_URL+`api/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (res.ok) {
-      setUser(undefined);
-    }
-  });
+  });;
 
   return <form action={login} method="post" >
     <input name="email" type="email" required></input>
@@ -278,7 +268,6 @@ export function LoginPage() {
     <button type="submit" formaction={login}>Login</button>
     <button type="submit" formaction={signup}>Signup</button>
     <button type="submit" formaction={test}>Test</button>
-    <button type="submit" formaction={logout}>Logout</button>
   </form>
 }
 

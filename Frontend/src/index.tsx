@@ -1,6 +1,6 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
-import { Router, Route, A, RouteSectionProps } from "@solidjs/router";
+import { Router, Route, A, RouteSectionProps, action } from "@solidjs/router";
 import { createSignal, JSX, onMount, Show } from 'solid-js'
 import './index.css'
 import { Page404, MainPage, ProductPage, LoginPage, BACKEND_URL } from './App.tsx'
@@ -21,6 +21,16 @@ function FloatingBox(props: { onClose: () => any, children: JSX.Element }) {
 }
 
 function Header() {
+  const logout = async () => {
+    const res = await fetch(BACKEND_URL+`api/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setUser(undefined);
+    }
+  }
+
   const [isBoxOpen, setIsBoxOpen] = createSignal(false);
 
   const openBox = () => setIsBoxOpen(true);
@@ -38,7 +48,10 @@ function Header() {
       <input type="text" placeholder="Type something..." />
     </FloatingBox>
     </Show>
-    <A href={"/login"}>Login</A>
+    <Show when={user()} fallback={<A href={"/login"}><button>Login</button></A>}>
+      <button on:click={logout}>Logout</button>
+      <p>{user()!.email}</p>
+    </Show>
   </div>
 }
 
@@ -61,7 +74,7 @@ type User = {
 }
 
 export const [cart, setCart, initCart] = makePersisted(createStore<CartProduct[]>([]), {name: "cart"});
-export const [user, setUser, initUser] = makePersisted(createSignal<User | undefined>({email: ""}), {name: "user"});
+export const [user, setUser] = createSignal<User | undefined>({email: ""});
 
 render(
   () => {
