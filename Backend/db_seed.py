@@ -8,6 +8,11 @@ import os
 def create_customers():
     return [
         User(
+            email="admin",
+            password="123",
+            admin=True,
+        ),
+        User(
             name="jens bo",
             password="password",
             email="jens@email.com",
