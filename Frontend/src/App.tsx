@@ -229,6 +229,8 @@ export function ProductPage() {
 }
 
 export function LoginPage() {
+  const [error, setError] = createSignal<string | undefined>(undefined);
+
   const access = async (endpoint: string, data: URLSearchParams) => {
     const res = await fetch(endpoint, {
       method: "POST",
@@ -240,7 +242,9 @@ export function LoginPage() {
     if (res.ok) {
       setUser({email: data.get("email")!})
     }
-    return { body: await res.json(), ok: res.ok };
+    else {
+      setError(await res.text());
+    }
   }
 
   const login = action(async (data) => {
@@ -262,13 +266,18 @@ export function LoginPage() {
     });
   });;
 
-  return <form action={login} method="post" >
-    <input name="email" type="email" required></input>
-    <input name="password" type="password" required></input>
-    <button type="submit" formaction={login}>Login</button>
-    <button type="submit" formaction={signup}>Signup</button>
-    <button type="submit" formaction={test}>Test</button>
-  </form>
+  return <>
+    <form action={login} method="post" >
+      <input name="email" type="email" required></input>
+      <input name="password" type="password" required></input>
+      <button type="submit" formaction={login}>Login</button>
+      <button type="submit" formaction={signup}>Signup</button>
+      <button type="submit" formaction={test}>Test</button>
+    </form>
+    <Show when={error()}>
+      <p>{error()!}</p>
+    </Show>
+  </>
 }
 
 export function Page404() {
