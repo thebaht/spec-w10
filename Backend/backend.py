@@ -1,5 +1,7 @@
 import json
 import sys
+
+from polars import date
 from dbcontext import *
 from sqlalchemy import and_
 from flask import Flask, Response, jsonify, request
@@ -11,7 +13,7 @@ import models
 import os
 import uuid
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies, unset_jwt_cookies, unset_access_cookies
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies, unset_jwt_cookies, unset_access_cookies, verify_jwt_in_request
 from functools import wraps
 from datetime import timedelta
 
@@ -110,9 +112,11 @@ def populateDB():
         manufacturers, products = db_seed.create_manufacturers_and_products()
         S.add_all(manufacturers)
         S.add_all(products)
-        
+
         admin_acc = User(
             email="a@a",
+            name="Bobby",
+            address="Abevej 123",
             password=bcrypt.generate_password_hash('123').decode('utf-8'),
             admin=True,
         )
@@ -244,7 +248,7 @@ def admin_required(f):
 def allow_creds(response):
     if not isinstance(response, Response):
         response = Response(response)
-    
+
     response.headers.extend({
         "access-control-allow-credentials": "true",
         "access-control-allow-methods": "GET,PUT,POST,DELETE,UPDATE,OPTIONS",
@@ -384,31 +388,47 @@ def order():
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
         order_products = blueprint.pop("order_products")
 
-        blueprint["timestamp"] = datetime.fromisoformat(blueprint["timestamp"])
+        blueprint["timestamp"] = datetime.now()
+        blueprint["status"] = "Ordered"
+        if verify_jwt_in_request(optional=True):
+            id = get_jwt_identity().get('id')
+            print(id)
+            user = session.query(models.User).filter(models.User.id == id).first()
+            print(user)
+            if user:
+                print(user.id)
+                blueprint["user_id"]=user.id
+
+        blueprint["price"] = 0.0
 
         order = Order(**blueprint)
 
         order.order_products = [OrderProduct(order_id=order.id, **order_product) for order_product in order_products]
 
+
         session.add(order)
 
         session.merge(order)
 
+        price = 0.0
         for orderproduct in order.order_products:
-            print(orderproduct.product)
+            price += orderproduct.quantity * orderproduct.product.price
+
             if orderproduct.product.stock >= orderproduct.quantity:
                 orderproduct.product.stock -= orderproduct.quantity
             else:
                 raise Exception("Not enough products in stock")
 
-        data = serialize_model(order) # Serialize the created item
+        order.price = price
+
+        data = order.id
     except Exception as e:
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
         _commit(session) # Commit transaction to database
         session.close() # Close the session
-    return jsonify(data), 200 # Return serialized item as a JSON response
+    return str(data), 200 # Return serialized item as a JSON response
 
 
 
@@ -598,7 +618,11 @@ def get_user_information():
         id = get_jwt_identity().get('id')
         user = session.query(models.User).filter(models.User.id == id).first()
         mappers = ['orders']
+
         data = serialize_model(user, mappers)
+        data.pop("password")
+        data.pop("token")
+        data.pop("id")
     except Exception as e:
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code

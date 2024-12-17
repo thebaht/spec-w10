@@ -85,6 +85,18 @@ button {
   object-fit: contain;
 }
 
+.cartContainer {
+  max-width: 600px !important;
+  width: 500px !important;
+  display: flex;
+  border-bottom: 3px solid black;
+}
+
+.cartColumn {
+  margin: auto;
+  flex: 50%;
+}
+
 
 
 
@@ -108,10 +120,22 @@ button {
   border-radius: 10px;
   width: 90%;
   max-width: 400px;
+  max-height: 90vh;
+  overflow: scroll;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
 
+
 #product > img {
   float: left;
+}
+
+#quantity_counter {
+  max-width: 30px;
+}
+
+.checkoutfield {
+  margin-left: 40px;
+  max-width: 400px;
 }
