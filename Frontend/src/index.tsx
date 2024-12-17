@@ -1,7 +1,7 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
 import { Router, Route, A, RouteSectionProps, action } from "@solidjs/router";
-import { createSignal, JSX, onMount, Show } from 'solid-js'
+import { createEffect, createSignal, JSX, onMount, Show } from 'solid-js'
 import './index.css'
 import { Page404, MainPage, ProductPage, LoginPage, BACKEND_URL } from './App.tsx'
 import { makePersisted } from '@solid-primitives/storage';
@@ -32,9 +32,38 @@ function Header() {
   }
 
   const [isBoxOpen, setIsBoxOpen] = createSignal(false);
-
   const openBox = () => setIsBoxOpen(true);
   const closeBox = () => setIsBoxOpen(false);
+
+  const [isLoginOpen, setIsLoginOpen] = createSignal(false);
+  const openLogin = () => setIsLoginOpen(true);
+  const closeLogin = () => setIsLoginOpen(false);
+
+  createEffect(() => {
+    if (user()) {
+      setIsLoginOpen(false);
+    }
+  });
+
+  const loginEl = () => {
+    if (user()) {
+      return <>
+        <button on:click={logout}>Logout</button>
+        <p>{user()!.email}</p>
+      </>
+    }
+    else {
+      return <>
+        <button on:click={openLogin}>Login</button>
+        <Show when={isLoginOpen()}>
+          <FloatingBox onClose={closeLogin}>
+            <LoginPage/>
+          </FloatingBox>
+        </Show>
+      </>
+    }
+  }
+
   return <div id="header">
     <A id="home" href={"/"}>
       <img id="logo" src="/logo.png"></img>
@@ -43,15 +72,12 @@ function Header() {
 
     <button onClick={openBox}>create product</button>
     <Show when={isBoxOpen()}>
-    <FloatingBox onClose={closeBox}>
-      <h2>Create Product</h2>
-      <input type="text" placeholder="Type something..." />
-    </FloatingBox>
+      <FloatingBox onClose={closeBox}>
+        <h2>Create Product</h2>
+        <input type="text" placeholder="Type something..." />
+      </FloatingBox>
     </Show>
-    <Show when={user()} fallback={<A href={"/login"}><button>Login</button></A>}>
-      <button on:click={logout}>Logout</button>
-      <p>{user()!.email}</p>
-    </Show>
+    {loginEl()}
   </div>
 }
 
