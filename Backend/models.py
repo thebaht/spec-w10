@@ -94,7 +94,7 @@ class User(Base):
     password: Mapped[str] = mapped_column(String(60))
     name: Mapped[str] = mapped_column(String(100), nullable=True)
     address: Mapped[str] = mapped_column(String(100), nullable=True)
-    admin: Mapped[bool] = False
+    admin: Mapped[bool] = mapped_column(default=False)
     token: Mapped[str] = mapped_column(String(1000), nullable=True)
 
     orders: Mapped[List["Order"]] = relationship(

@@ -20,7 +20,21 @@ dbcontext = DatabaseContext.get_instance()   # Create an instance of the Databas
 dbcontext.clear_database()      # Clear the database, to avoid duplicate data when populating
 app = Flask(__name__)           # Initialize a Flask app instance
 cors = CORS(app)
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])  # Update with your frontend URL
+CORS(
+    app,
+    supports_credentials=True,
+    methods=["GET","PUT","POST","DELETE","UPDATE", "OPTIONS"],
+    origins="http://localhost:5173",
+    allow_headers=["Content-Type"],
+)  
+
+@app.after_request
+def creds(response):
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, UPDATE, OPTIONS"
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
 
 bcrypt = Bcrypt(app)
 app.config['JWT_VERIFY_SUB'] = False
@@ -28,9 +42,10 @@ app.config['JWT_SECRET_KEY'] = 'asd'
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
-app.config['JWT_COOKIE_SECURE'] = False
+app.config['JWT_COOKIE_SECURE'] = True
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_CSRF_IN_COOKIES"] = False
+app.config["JWT_COOKIE_SAMESITE"] = "None"
 jwt = JWTManager(app)
 
 IMAGE_FOLDER = os.path.join(os.getcwd(), 'static', 'images')
@@ -225,6 +240,18 @@ def admin_required(f):
             return jsonify({'message': 'Admin rights are required to access this endpoint!'}), 403
         return f(*args, **kwargs)
     return check_admin
+
+def allow_creds(response):
+    if not isinstance(response, Response):
+        response = Response(response)
+    
+    response.headers.extend({
+        "access-control-allow-credentials": "true",
+        "access-control-allow-methods": "GET,PUT,POST,DELETE,UPDATE,OPTIONS",
+        "access-control-allow-origin": "http://localhost:5173",
+    })
+
+    return response
 
 @app.route('/api/refresh', methods=['POST'])
 @jwt_required(refresh=True)
@@ -452,25 +479,21 @@ def delete_item(table_name, id):
     finally:
         _commit(session) # Commit transaction to database
         session.close() # Close the session
-    return "deleted", 200 # Return a success message
+
+    return "deleted",  200 # Return a success message
 
 
 @app.route('/api/user', methods=['POST'])
 def create_user():
     session = dbcontext.get_session()
     try:
-        table = models.TABLES_GET('user').cls
         blueprint = dict(request.json.items())
         blueprint['password'] = bcrypt.generate_password_hash(blueprint['password']).decode('utf-8')
-        user = table(**blueprint)
-        # email = request.args.get("email")
-        # password = bcrypt.generate_password_hash(request.args.get("password")).decode('utf-8')
-        # user = table(email=email, password=password)
+        user = models.User(**blueprint)
 
         session.add(user)
         session.commit()
         access_token = create_access_token(identity={'id': user.id, 'email': user.email})
-        refresh_token = create_refresh_token(identity={'id': user.id, 'email': user.email})
         user.token = access_token
     except Exception as e:
         session.rollback() # Roll back changes if an error occurs
@@ -478,23 +501,9 @@ def create_user():
     finally:
         _commit(session) # Commit transaction to database
         session.close() # Close the session
-    response = Response(
-        json.dumps({access_token: access_token, refresh_token: refresh_token}),
-        mimetype="application/json",
-        headers={
-            "access-control-allow-credentials": "true",
-            "access-control-allow-methods": "GET,PUT,POST,DELETE,UPDATE,OPTIONS",
-            "access-control-allow-origin": "http://localhost:5173",
-        }
-    )
 
+    response = Response("OK")
     set_access_cookies(response, access_token)
-    # set_access_cookies(response, refresh_token)
-
-    # cookies = {access_token: access_token, refresh_token: refresh_token}
-    # for name, value in cookies.items():
-    #     exp = get_jwt(access_token).get('exp')
-    #     response.set_cookie(key=name, value=value, expires=exp, secure=True, httponly=True)
 
     return response, 200 # Return a success message
 
@@ -502,21 +511,12 @@ def create_user():
 def login():
     session = dbcontext.get_session()
     try:
-        table = models.TABLES_GET('user').cls
-
         blueprint = dict(request.json.items())
-        user = session.query(table).filter(table.email == blueprint['email']).first()
+        user = session.query(models.User).filter(models.User.email == blueprint['email']).first()
         if not user or not bcrypt.check_password_hash(user.password, blueprint['password']):
             raise Exception("invalid login")
 
-        # email = request.args.get("email")
-        # password = request.args.get("password")
-        # user = session.query(table).filter(table.email == email).first()
-        # if not user or not bcrypt.check_password_hash(user.password, password):
-        #     raise Exception("invalid login")
-
         access_token = create_access_token(identity={'id': user.id, 'email': user.email})
-        refresh_token = create_refresh_token(identity={'id': user.id, 'email': user.email})
         user.token = access_token
 
     except Exception as e:
@@ -526,18 +526,8 @@ def login():
         _commit(session) # Commit transaction to database
         session.close() # Close the session
 
-    response = Response(
-        json.dumps({access_token: access_token, refresh_token: refresh_token}),
-        mimetype="application/json",
-    )
-
+    response = Response("OK")
     set_access_cookies(response, access_token)
-    # set_access_cookies(response, refresh_token)
-
-    # cookies = {access_token: access_token, refresh_token: refresh_token}
-    # for name, value in cookies.items():
-    #     exp = get_jwt(access_token).get('exp')
-    #     response.set_cookie(key=name, value=value, expires=exp, secure=True, httponly=True)
 
     return response, 200 # Return a success message
 
@@ -551,7 +541,7 @@ def logout():
         id = get_jwt_identity().get('id')
         user = session.query(models.User).filter(models.User.id == id).first()
         user.token = None
-        response = jsonify(msg="Logout successful")
+        response = Response("Logout successful")
         unset_jwt_cookies(response)
         unset_access_cookies(response)
 
@@ -569,10 +559,8 @@ def logout():
 def set_user_information():
     session = dbcontext.get_session()
     try:
-        table = models.TABLES_GET('user').cls
-
         blueprint = dict(request.json.items())
-        user = session.query(table).filter(table.id == id).first()
+        user = session.query(models.User).filter(models.User.id == id).first()
         for key, value in blueprint.items():
             setattr(user, key, value)
 
@@ -590,9 +578,8 @@ def set_user_information():
 def get_user_information():
     session = dbcontext.get_session()
     try:
-        table = models.TABLES_GET('user').cls
         id = get_jwt_identity().get('id')
-        user = session.query(table).filter(table.id == id).first()
+        user = session.query(models.User).filter(models.User.id == id).first()
         mappers = ['orders']
         data = serialize_model(user, mappers)
     except Exception as e:
