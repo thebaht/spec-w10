@@ -64,7 +64,7 @@ type Order = {
   address: string;
   status?: string;
 
-  order_products: OrderProduct[]
+  order_products: OrderProduct[];
 }
 
 type User = {

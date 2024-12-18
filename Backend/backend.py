@@ -535,6 +535,7 @@ def set_user_information():
 
 @app.route('/api/user/info', methods=['GET'], endpoint='get_user_information')
 @jwt_required()
+@user_required
 def get_user_information():
     session = dbcontext.get_session()
     try:
