@@ -1,9 +1,8 @@
-import { createSignal, createMemo, onMount, For, JSX, createResource, ErrorBoundary, Show, createEffect, Resource } from 'solid-js'
-import { A, action, useParams } from "@solidjs/router";
+import { createSignal, onMount, For, createResource, ErrorBoundary, Show, createEffect, Resource } from 'solid-js'
+import { A, action, redirect, useParams, useNavigate } from "@solidjs/router";
 import './App.css'
-import { createStore, unwrap } from 'solid-js/store'
-import { jwtDecode }  from 'jwt-decode';
-import { cart, CartProduct, setCart, setUser, user, UserStorage } from './index.tsx'
+import { createStore } from 'solid-js/store'
+import { cart, CartProduct, setCart, setUser, user, UserStorage, } from './index.tsx'
 
 export const BACKEND_URL = 'http://127.0.0.1:5000/'
 
@@ -69,9 +68,9 @@ type Order = {
 }
 
 type User = {
-  email: string;
-  name: string;
-  address: string;
+  email?: string;
+  name?: string;
+  address?: string;
 
   orders: Order[];
 }
@@ -202,12 +201,28 @@ function Product(props: { product: Resource<Product> }) {
     return product().manufacturer!.products!.filter((p) => p.id != product().id);
   }
 
+  const navigate = useNavigate();
+
+  const delete_product = async () => {
+    const res = await fetch(BACKEND_URL+`api/delete/product/`+product().id, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (res.ok) {
+      navigate("/", { scroll: true });
+    }
+  };
 
   return <div id="product">
     <img src={BACKEND_URL+product().image} />
     <h1>{product().name}</h1>
+    <h3><b>{product().price}</b> Monopoly money</h3>
     <button on:click={addToCart}>Add to cart</button>
     <input id="quantity_counter" type="number" min="1" value={quantity()} on:input={(ev) => {setQuantity(Math.max(Number(ev.target.value), 1))}}></input>
+    {/* <Show when={user()?.admin}> */}
+      <button on:click={delete_product}>Delete</button>
+    {/* </Show> */}
     <h2>In a serving</h2>
     <ProductPerServing product={product}/>
     <h2>Other products by {product().manufacturer!.name}</h2>
@@ -242,8 +257,18 @@ export function LoginPage() {
       credentials: "include",
     });
 
-    if (res.ok) {
-      setUser({email: data.get("email")!})
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+
+    const res_user = await fetch(BACKEND_URL+`api/user/info`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (res_user.ok) {
+      setUser(await res_user.json());
     }
     else {
       setError(await res.text());
@@ -257,17 +282,6 @@ export function LoginPage() {
   const signup = action(async (data) => {
     await access(BACKEND_URL+`api/user`, data);
   });
-
-  const test = action(async (data) => {
-    const res = await fetch(BACKEND_URL+`api/delete/product/1`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(Object.fromEntries(data)),
-      credentials: "include",
-    });
-  });;
 
   return <>
     <form action={login} method="post" >
@@ -320,10 +334,20 @@ export function CartPage() {
     return () => {
       setCart(cart.filter((item) => item.id != id));
     };
-  }
+  };
+
+  const sumPrice = () => {
+    return cart
+      .map((item) => {
+        const product = products.find((product) => product.id == item.id);
+        return item.quantity * product!.price;
+      })
+      .reduce((total, price) => total + price, 0);
+  };
 
   return <>
     <Show when={products.length != 0}>
+      <h3><b>{sumPrice()}</b> Monopoly money</h3>
       <For each={cart}>{(item) =>
         <CartContainer remove={removeFromCart(item.id)} item={item} product={products.find((product) => product.id == item.id)!}/>
       }</For>
@@ -364,12 +388,12 @@ export function CheckoutPage() {
   const buy = action(async (data) => {
     setError(undefined);
 
-    // {email: string, name: string, address: string} = Object.fromEntries(data);
+    const {email, name, address} = Object.fromEntries(data);
 
     const order: Order = {
-      email: email!.value,
-      name: name!.value,
-      address: address!.value,
+      email: email,
+      name: name,
+      address: address,
 
       order_products: cart.map((item) => {
         return {
@@ -406,6 +430,74 @@ export function CheckoutPage() {
     </Show>
     <CartPage/>
   </>
+}
+
+export function UserPage() {
+  const [user_info] = createResource<User | undefined, UserStorage | string>(() => { return user() || "" }, async (user) => {
+    if (typeof(user) === "string")
+      return undefined;
+
+    const res = await fetch(BACKEND_URL+`api/user/info`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (res.ok) {
+      return await res.json()
+    }
+    else {
+      return undefined;
+    }
+  });
+
+  let email;
+  let name;
+  let address;
+
+  createEffect(() => {
+    const info = user_info();
+    if (info) {
+      email!.value = info.email;
+      name!.value = info.name;
+      address!.value = info.address;
+    }
+  });
+
+  const [error, setError] = createSignal<string | undefined>(undefined);
+
+  const save = action(async (data) => {
+    setError(undefined);
+
+    const res = await fetch(BACKEND_URL+`api/user/info`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json",},
+      body: JSON.stringify(Object.fromEntries(data)),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      setError(await res.text());
+    }
+  })
+
+  return <Show when={() => user_info.loading} fallback={<Error text="Loading..."/>}>
+    <Show when={user_info()} fallback={<Error text="Not logged in"/>}>
+      <form action={save} method="post">
+        <input name="email" class="checkoutfield" placeholder="E-mail" type="email" required ref={email}/>
+        <input name="name" class="checkoutfield" placeholder="Name" required ref={name}/>
+        <input name="address" class="checkoutfield" placeholder="Address" required ref={address}/>
+        <button type="submit" formaction={save}>Save</button>
+      </form>
+      <Show when={error()}>
+        <p>{error()!}</p>
+      </Show>
+      <For each={user_info()!.orders}>{(order) =>
+        <p>
+          Bought {order.order_products.map((product) => product.quantity).reduce((acc, quantity) => acc + quantity, 0)} items for {order.price!} Monopoly money at {order.timestamp!.toString()}
+        </p>
+      }</For>
+    </Show>
+  </Show>
 }
 
 export function Page404() {

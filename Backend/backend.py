@@ -4,16 +4,17 @@ import sys
 from polars import date
 from dbcontext import *
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
+from pymysql.err import IntegrityError as pymysql_IntegrityError
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 import db_seed
 from sqlalchemy.sql import operators
-from sqlalchemy.orm.collections import InstrumentedList
 import models
 import os
 import uuid
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, create_refresh_token, set_access_cookies, unset_jwt_cookies, unset_access_cookies, verify_jwt_in_request
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies, unset_access_cookies, verify_jwt_in_request
 from functools import wraps
 from datetime import timedelta
 
@@ -168,55 +169,6 @@ def serialize_model(inst: Base, mappers: List[str] = []):
     return serialized_columns
 
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, models.Table):
-            return {
-                "name": o.name,
-                "table": o.table,
-                "polymorphic": o.polymorphic,
-                "columns": [self.default(column) for column in o.columns],
-            }
-        elif isinstance(o, models.TableColumn):
-            return {
-                "name": o.name,
-                "type": o.type.__name__,
-                "optional": o.optional,
-                "primary_key": o.primary_key,
-                "foreign_keys": [
-                    {
-                        "table": key.column.table.name,
-                        "column": key.column.name
-                    }
-                    for key in o.foreign_keys
-                ],
-                "mapper": o.mapper,
-            }
-        else:
-            return super().default(o)
-
-
-@app.route('/api/tables', methods=['GET'])
-def tables_all():
-    """
-    Returns the database table definitions for everything.
-
-    Returns:
-        Response: JSON response of table definitions.
-    """
-    return json.dumps(models.TABLES, cls=EnhancedJSONEncoder), 200 # Return serialized data as a JSON response
-
-
-@app.route('/api/tables/item', methods=['GET'])
-def tables_item():
-    """
-    Returns the database table definitions for items.
-
-    Returns:
-        Response: JSON response of table definitions.
-    """
-    return json.dumps(models.ITEMS, cls=EnhancedJSONEncoder), 200 # Return serialized data as a JSON response
-
 def user_required(f):
     """
     Decorator that ensures the user has admin rights.
@@ -245,24 +197,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return check_admin
 
-def allow_creds(response):
-    if not isinstance(response, Response):
-        response = Response(response)
-
-    response.headers.extend({
-        "access-control-allow-credentials": "true",
-        "access-control-allow-methods": "GET,PUT,POST,DELETE,UPDATE,OPTIONS",
-        "access-control-allow-origin": "http://localhost:5173",
-    })
-
-    return response
-
-@app.route('/api/refresh', methods=['POST'])
-@jwt_required(refresh=True)
-def refresh_token():
-    current_user = get_jwt_identity()
-    new_access_token = create_access_token(identity=current_user)
-    return jsonify(access_token=new_access_token), 200
 
 
 @app.route('/api/get/<string:table_name>', methods=['POST'])
@@ -295,9 +229,9 @@ def get_items(table_name):
         session.rollback()  # Roll back changes if an error occurs
         return str(e), 400  # Return error message with 400 status code
     finally:
-        _commit(session)  # Commit transaction to database
+        session.commit()  # Commit transaction to database
         session.close()  # Close the session
-    return jsonify(data), 200  # Return serialized data as a JSON response
+    return jsonify(data), 200  # Return serialized data as a JSON responsef
 
 
 @app.route('/api/get/<string:table_name>/<int:id>', methods=['POST'])
@@ -327,10 +261,9 @@ def get_item(table_name, id):
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return jsonify(data), 200 # Return serialized data as a JSON response
-
 
 
 
@@ -370,7 +303,7 @@ def create_item():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return jsonify(data), 200 # Return serialized item as a JSON response
 
@@ -396,11 +329,8 @@ def order():
         blueprint["status"] = "Ordered"
         if verify_jwt_in_request(optional=True):
             id = get_jwt_identity().get('id')
-            print(id)
             user = session.query(models.User).filter(models.User.id == id).first()
-            print(user)
             if user:
-                print(user.id)
                 blueprint["user_id"]=user.id
 
         blueprint["price"] = 0.0
@@ -409,9 +339,7 @@ def order():
 
         order.order_products = [OrderProduct(order_id=order.id, **order_product) for order_product in order_products]
 
-
         session.add(order)
-
         session.merge(order)
 
         price = 0.0
@@ -430,7 +358,7 @@ def order():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return str(data), 200 # Return serialized item as a JSON response
 
@@ -471,11 +399,9 @@ def update_item(table_name, id):
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return jsonify(id), 200 # Return the ID of the updated item as a JSON response
-
-
 
 
 @app.route('/api/delete/<string:table_name>/<int:id>', methods=['DELETE'], endpoint='delete_entry')
@@ -501,7 +427,7 @@ def delete_item(table_name, id):
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
 
     return "deleted",  200 # Return a success message
@@ -513,23 +439,31 @@ def create_user():
     try:
         blueprint = dict(request.json.items())
         blueprint['password'] = bcrypt.generate_password_hash(blueprint['password']).decode('utf-8')
+
+        if session.query(models.User).filter(models.User.email == blueprint["email"]).first():
+            raise Exception("An account with this e-mail already exists")
+
         user = models.User(**blueprint)
 
         session.add(user)
         session.commit()
         access_token = create_access_token(identity={'id': user.id, 'email': user.email})
         user.token = access_token
+    except (IntegrityError, pymysql_IntegrityError) as e:
+        session.rollback() # Roll back changes if an error occurs
+        return "Database error", 400
     except Exception as e:
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
 
     response = Response("OK")
     set_access_cookies(response, access_token)
 
     return response, 200 # Return a success message
+
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -547,7 +481,7 @@ def login():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
 
     response = Response("OK")
@@ -573,34 +507,19 @@ def logout():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return response, 200
-
-@app.route('/api/user/email', methods=['POST'], endpoint='get_user_email')
-@jwt_required()
-@user_required
-def get_user_email():
-    session = dbcontext.get_session()
-    try:
-        id = get_jwt_identity().get('id')
-        user = session.query(models.User).filter(models.User.id == id).first()
-        email = user.email
-    except Exception as e:
-        session.rollback() # Roll back changes if an error occurs
-        return str(e), 400 # Return error message with 400 status code
-    finally:
-        _commit(session) # Commit transaction to database
-        session.close() # Close the session
-    return email, 200 # Return a success message
 
 
 @app.route('/api/user/info', methods=['POST'], endpoint='set_user_information')
 @jwt_required()
+@user_required
 def set_user_information():
     session = dbcontext.get_session()
     try:
         blueprint = dict(request.json.items())
+        id = get_jwt_identity().get('id')
         user = session.query(models.User).filter(models.User.id == id).first()
         for key, value in blueprint.items():
             setattr(user, key, value)
@@ -609,9 +528,9 @@ def set_user_information():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
-    return jsonify(user.id), 200 # Return a success message
+    return "OK", 200 # Return a success message
 
 
 @app.route('/api/user/info', methods=['GET'], endpoint='get_user_information')
@@ -621,7 +540,7 @@ def get_user_information():
     try:
         id = get_jwt_identity().get('id')
         user = session.query(models.User).filter(models.User.id == id).first()
-        mappers = ['orders']
+        mappers = ['orders', 'orders.order_products']
 
         data = serialize_model(user, mappers)
         data.pop("password")
@@ -631,27 +550,12 @@ def get_user_information():
         session.rollback() # Roll back changes if an error occurs
         return str(e), 400 # Return error message with 400 status code
     finally:
-        _commit(session) # Commit transaction to database
+        session.commit() # Commit transaction to database
         session.close() # Close the session
     return jsonify(data), 200 # Return a success message
 
 
-@app.route('/api/istestmode')
-def is_test_mode():
-    return str(TESTMODE), 200
-
-TESTMODE = False    # test mode state
-
-def _commit(session:Session):
-    """Wrapper function for session.commit.\n
-    Ignores commits and rolls back changes if in TESTMODE"""
-    if TESTMODE:
-        session.rollback()  # roll back changes
-    else:
-        session.commit()    # commit changes
 
 if __name__ == "__main__":
-    TESTMODE = "testmode" in sys.argv   # testmode argument in terminal
-    print(f"Testmode: {"Enabled" if TESTMODE else "Disabled"}")
     populateDB()    # populate db with example data
     app.run()   # start flask app
