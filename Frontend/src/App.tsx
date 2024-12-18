@@ -143,7 +143,7 @@ function ProductPerServing(props: { product: () => Product }) {
   const { product } = props;
   const details = () => product()?.details!
 
-  return <table>
+  return <table class="productDetails">
     <thead>
       <tr>
         <th>Weight</th>
@@ -160,22 +160,22 @@ function ProductPerServing(props: { product: () => Product }) {
         <th>Vitamins</th>
       </tr>
     </thead>
-      <tbody>
-        <tr>
-          <td>{details().weight} oz</td>
-          <td>{details().cups} cups</td>
+    <tbody>
+      <tr>
+        <td>{details().weight} oz</td>
+        <td>{details().cups} cups</td>
 
-          <td>{details().calories} kcal</td>
-          <td>{details().protein} g</td>
-          <td>{details().fat} g</td>
-          <td>{details().sodium} mg</td>
-          <td>{details().fiber} g</td>
-          <td>{details().carbohydrates} g</td>
-          <td>{details().sugars} g</td>
-          <td>{details().potassium} mg</td>
-          <td>{details().vitamins} %</td>
-        </tr>
-      </tbody>
+        <td>{details().calories} kcal</td>
+        <td>{details().protein} g</td>
+        <td>{details().fat} g</td>
+        <td>{details().sodium} mg</td>
+        <td>{details().fiber} g</td>
+        <td>{details().carbohydrates} g</td>
+        <td>{details().sugars} g</td>
+        <td>{details().potassium} mg</td>
+        <td>{details().vitamins} %</td>
+      </tr>
+    </tbody>
   </table>
 }
 
@@ -215,17 +215,26 @@ function Product(props: { product: Resource<Product> }) {
   };
 
   return <div id="product">
-    <img src={BACKEND_URL+product().image} />
-    <h1>{product().name}</h1>
-    <h3><b>{product().price}</b> Monopoly money</h3>
-    <button on:click={addToCart}>Add to cart</button>
-    <input id="quantity_counter" type="number" min="1" value={quantity()} on:input={(ev) => {setQuantity(Math.max(Number(ev.target.value), 1))}}></input>
-    {/* <Show when={user()?.admin}> */}
-      <button on:click={delete_product}>Delete</button>
-    {/* </Show> */}
-    <h2>In a serving</h2>
+    <div class="title">
+      <img src={BACKEND_URL+product().image} />
+      <h1>{product().name}</h1>
+    </div>
+    <div class="money">
+      <div class="money_column">
+        <button id="buy_button" on:click={addToCart}>Add to cart</button>
+        <input id="quantity_counter" type="number" min="1" value={quantity()} on:input={(ev) => {setQuantity(Math.max(Number(ev.target.value), 1))}}/>
+        <h3 id="price"><b>{product().price * quantity()}</b> Monopoly money</h3>
+      </div>
+      <div class="money_column">
+        {/* <Show when={user()?.admin}> */}
+          <button id="delete_button" on:click={delete_product}>Delete</button>
+        {/* </Show> */}
+      </div>
+    </div>
+    <h2 id="nutrional_title">Nutritional information</h2>
+    <h4 id="nutrional_text">Per serving:</h4>
     <ProductPerServing product={product}/>
-    <h2>Other products by {product().manufacturer!.name}</h2>
+    <h2 id="other_products">Other products by {product().manufacturer!.name}</h2>
     <ProductView products={other_products()}/>
   </div>
 }

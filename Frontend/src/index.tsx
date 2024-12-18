@@ -49,8 +49,8 @@ function Header() {
   const loginEl = () => {
     if (user()) {
       return <>
+        <A id="user" href="/user"><b>{user()!.email}</b></A>
         <button on:click={logout}>Logout</button>
-        <A href="/user">{user()!.email}</A>
       </>
     }
     else {
@@ -71,8 +71,10 @@ function Header() {
       <h2 id="name">Cereal</h2>
     </A>
 
-    {loginEl()}
-    <button on:click={openCart}>Cart</button>
+    <div>
+      {loginEl()}
+    </div>
+    <button id="cart" on:click={openCart}>Cart</button>
     <Show when={isCartOpen()}>
       <FloatingBox onClose={closeCart} width='600px'>
         <A href="/checkout"><button on:click={closeCart}>Checkout</button></A>
@@ -86,7 +88,9 @@ const Layout = (props: RouteSectionProps) => {
   return (
       <>
           <Header/>
-          {props.children}
+          <div id="content">
+           {props.children}
+          </div>
       </>
   );
 };
