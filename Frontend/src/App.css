@@ -25,8 +25,6 @@ button {
 
   flex: 0 1 auto;
 
-  box-sizing: border-box;
-  width: 100%;
   height: var(--height);
   padding: calc(var(--height)*0.1);
 
