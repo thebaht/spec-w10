@@ -359,7 +359,11 @@ export function CheckoutPage() {
     }
   });
 
+  const [error, setError] = createSignal<string | undefined>(undefined);
+
   const buy = action(async (data) => {
+    setError(undefined);
+
     // {email: string, name: string, address: string} = Object.fromEntries(data);
 
     const order: Order = {
@@ -385,6 +389,9 @@ export function CheckoutPage() {
     if (res.ok) {
       setCart([]);
     }
+    else {
+      setError(await res.text());
+    }
   })
 
   return <>
@@ -394,6 +401,9 @@ export function CheckoutPage() {
       <input name="address" class="checkoutfield" placeholder="Address" required ref={address}/>
       <button type="submit" formaction={buy}>Buy</button>
     </form>
+    <Show when={error()}>
+      <p>{error()!}</p>
+    </Show>
     <CartPage/>
   </>
 }

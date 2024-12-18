@@ -388,6 +388,10 @@ def order():
         blueprint = dict(request.json.items()) # Extract the update data from request body, and parse it into a dictionary
         order_products = blueprint.pop("order_products")
 
+        quantity = sum(order_product["quantity"] for order_product in order_products)
+        if quantity == 0:
+            raise Exception("No items in cart")
+
         blueprint["timestamp"] = datetime.now()
         blueprint["status"] = "Ordered"
         if verify_jwt_in_request(optional=True):
